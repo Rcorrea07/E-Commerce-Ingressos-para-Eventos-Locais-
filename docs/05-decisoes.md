@@ -6,11 +6,11 @@ Será utilizado um único repositório contendo front-end, back-end e documenta�
 
 ## DEC-002 — Tecnologia do front-end
 
-O front-end será desenvolvido com Next.js, React, TypeScript e CSS.
+O front-end será desenvolvido com Next.js, React, TypeScript e Tailwind CSS.
 
 ## DEC-003 — CSS
 
-O projeto utilizará CSS global e CSS Modules, sem Tailwind CSS.
+O projeto utilizará Tailwind CSS e o arquivo globals.css para estilos globais necessários.
 
 ## DEC-004 — Organização do Git
 
