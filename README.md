@@ -1,72 +1,67 @@
-# Plataforma de Gestão e Comercialização de Ingressos
+# Plataforma de ingressos para eventos locais
 
-Plataforma de e-commerce especializada na divulgação e comercialização simulada de ingressos para eventos locais.
+Aplicação para divulgação, reserva temporária e emissão simulada de ingressos. A compra não usa carrinho: o cliente seleciona os tipos na página do evento e, ao continuar, abre um checkout de um único evento que reserva unidades por até 15 minutos.
 
-## Objetivo
+## Stack
 
-Desenvolver um sistema funcional que permita visualizar eventos, selecionar ingressos, utilizar um carrinho persistente e controlar a disponibilidade de ingressos.
+- Front-end: Next.js 16, React 19, TypeScript e Tailwind CSS;
+- API: Node.js 22, NestJS 11, TypeScript, Prisma 7 e Zod 4;
+- Identidade: Better Auth com sessões no MySQL;
+- Infra local: MySQL 8.4, MinIO e Mailpit via Docker Compose;
+- Contratos: OpenAPI e cliente TypeScript gerado com `openapi-typescript`/`openapi-fetch`.
 
-## Funcionalidades principais
+## Execução completa
 
-- Vitrine de eventos;
-- Filtros por categoria e data;
-- Visualização dos detalhes de um evento;
-- Cadastro e autenticação de usuários;
-- Carrinho associado ao usuário;
-- Controle de disponibilidade dos ingressos;
-- Confirmação simulada de pedidos;
-- Histórico de pedidos;
-- Painel administrativo;
-- Interface responsiva.
-
-## Tecnologias
-
-### Front-end
-
-- React;
-- Next.js;
-- TypeScript;
-- Tailwind CSS.
-
-### Back-end
-
-A tecnologia será definida e documentada pelo responsável pelo back-end.
-
-### Banco de dados
-
-O banco será definido e documentado pelo responsável pelo back-end.
-
-## Estrutura do repositório
-
-```text
-frontend/   Aplicação Next.js
-backend/    Aplicação back-end
-docs/       Documentação do projeto
-.github/    Modelos de tarefas e Pull Requests
-```
-
-## Equipe
-
-- Rafael Corrêa Barbosa: gestão, documentação, Navbar, rodapé e tráfego pago;
-- Enzo: back-end, banco de dados e APIs;
-- Perroni: front-end público e autenticação;
-- Marcelo Kian: front-end transacional, painel administrativo e design.
-
-## Como executar o front-end
+Requer Docker Desktop. Na raiz do projeto:
 
 ```bash
-nvm use
+docker compose up --build
+```
+
+| Serviço | URL |
+|---|---|
+| Front-end | http://localhost:3000 |
+| API | http://localhost:3001 |
+| Swagger | http://localhost:3001/docs |
+| MinIO Console | http://localhost:9001 |
+| Mailpit | http://localhost:8025 |
+
+As migrations, a criação do bucket e o seed são serviços one-shot e idempotentes. Credenciais locais de demonstração:
+
+- `admin@ingressos.local` / `Admin123!Local`;
+- `organizador@ingressos.local` / `Demo123!Local`;
+- `portaria@ingressos.local` / `Demo123!Local`;
+- `cliente@ingressos.local` / `Demo123!Local`.
+
+Essas credenciais e os segredos do Compose são exclusivamente locais. Para outro ambiente, copie [`backend/.env.example`](backend/.env.example) e substitua todos os segredos.
+
+## Desenvolvimento
+
+```bash
+cd backend
+npm install
+npm run prisma:generate
+npm run dev
+```
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-A aplicação estará disponível em:
+Para atualizar contratos e o cliente:
 
-```text
-http://localhost:3000
+```bash
+cd backend && npm run openapi:generate
+cd ../frontend && npm run api:generate
 ```
 
-## Status
+Documentação detalhada: [`docs/01-visao-geral.md`](docs/01-visao-geral.md), [`docs/03-regras-de-negocio.md`](docs/03-regras-de-negocio.md) e [`docs/06-api.md`](docs/06-api.md).
 
-Projeto em fase inicial de estruturação e desenvolvimento.
+## Equipe
+
+- Rafael Corrêa Barbosa: gestão, documentação e estrutura compartilhada;
+- Enzo: back-end, banco de dados, infraestrutura e contratos da API;
+- Perroni: front-end público e autenticação;
+- Marcelo Kian: seleção, checkout, histórico, painel e design responsivo.

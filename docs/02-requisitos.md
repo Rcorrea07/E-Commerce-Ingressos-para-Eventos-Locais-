@@ -1,77 +1,26 @@
-# Requisitos do Sistema
+# Requisitos do sistema
 
-## Requisitos funcionais
+## Funcionais
 
-### RF01 — Visualizar eventos
+- RF01: listar, pesquisar e filtrar eventos publicados, mantendo esgotados visíveis;
+- RF02: exibir detalhes, imagens, local, datas, tipos, preços e disponibilidade;
+- RF03: cadastrar, autenticar, verificar e recuperar contas por e-mail;
+- RF04: manter perfil brasileiro com telefone, CPF protegido e endereço;
+- RF05: selecionar tipos e quantidades localmente na página do evento;
+- RF06: iniciar checkout autenticado que reserva unidades por 15 minutos;
+- RF07: permitir retomada, heartbeat, cancelamento e confirmação imutável do checkout;
+- RF08: registrar pedido, snapshots e um ingresso por unidade;
+- RF09: listar pedidos e ingressos do cliente e cancelar pedidos elegíveis;
+- RF10: validar QR de uso único por equipe atribuída;
+- RF11: administrar eventos, tipos, capacidade, mídia e convites;
+- RF12: apresentar analytics de checkout, receita, ocupação e validações.
 
-O sistema deve permitir que qualquer visitante visualize os eventos disponíveis.
+## Não funcionais
 
-### RF02 — Filtrar eventos
-
-O usuário deve conseguir filtrar eventos por categoria e data.
-
-### RF03 — Visualizar detalhes
-
-O usuário deve conseguir abrir a página de um evento e consultar descrição, local, data, horário e tipos de ingresso.
-
-### RF04 — Cadastrar usuário
-
-O sistema deve permitir o cadastro de usuários.
-
-### RF05 — Autenticar usuário
-
-O sistema deve permitir login e logout.
-
-### RF06 — Adicionar ao carrinho
-
-Somente usuários autenticados devem conseguir adicionar ingressos ao carrinho.
-
-### RF07 — Alterar o carrinho
-
-O usuário deve conseguir aumentar, diminuir ou remover itens do carrinho.
-
-### RF08 — Consultar disponibilidade
-
-O sistema deve consultar a disponibilidade dos ingressos.
-
-### RF09 — Confirmar pedido
-
-O sistema deve permitir uma confirmação simulada do pedido, sem pagamento real.
-
-### RF10 — Registrar histórico
-
-Os pedidos confirmados devem ser registrados no histórico do usuário.
-
-### RF11 — Administrar eventos
-
-Um administrador deve conseguir cadastrar, editar e desativar eventos.
-
-### RF12 — Consultar métricas
-
-O painel administrativo deve apresentar informações básicas sobre eventos, pedidos e ingressos.
-
-## Requisitos não funcionais
-
-### RNF01 — Responsividade
-
-A interface deve funcionar em celulares, tablets e computadores.
-
-### RNF02 — Persistência
-
-Usuários, eventos, carrinhos e pedidos devem ser persistidos no banco de dados.
-
-### RNF03 — Segurança
-
-Senhas não podem ser armazenadas em texto puro.
-
-### RNF04 — Integridade de estoque
-
-O sistema não pode confirmar uma quantidade superior à disponibilidade.
-
-### RNF05 — Organização
-
-O código deve estar dividido em componentes e módulos com responsabilidades claras.
-
-### RNF06 — Documentação
-
-As decisões, regras e instruções de execução devem ser documentadas continuamente.
+- RNF01: impedir oversell sob concorrência real no MySQL;
+- RNF02: documentar a API em OpenAPI e gerar cliente TypeScript;
+- RNF03: usar cookies HttpOnly, CORS explícito, rate limit, Helmet e logs redigidos;
+- RNF04: armazenar datas em UTC e dinheiro em centavos de BRL;
+- RNF05: subir o ambiente completo com `docker compose up --build`;
+- RNF06: retornar erros no formato `application/problem+json` com `requestId`;
+- RNF07: manter liveness e readiness separadas.

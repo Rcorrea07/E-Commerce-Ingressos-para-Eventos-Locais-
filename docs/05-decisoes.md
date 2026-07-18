@@ -1,45 +1,15 @@
-# Registro de Decisões
+# Decisões arquiteturais
 
-## DEC-001 — Repositório único
-
-Será utilizado um único repositório contendo front-end, back-end e documentação.
-
-## DEC-002 — Tecnologia do front-end
-
-O front-end será desenvolvido com Next.js, React, TypeScript e Tailwind CSS.
-
-## DEC-003 — CSS
-
-O projeto utilizará Tailwind CSS e o arquivo globals.css para estilos globais necessários.
-
-## DEC-004 — Organização do Git
-
-A branch `main` armazenará a versão integrada do projeto.
-
-Cada tarefa será desenvolvida em uma branch própria.
-
-## DEC-005 — Pagamento
-
-Não haverá integração de pagamento real no MVP.
-
-## DEC-006 — Confirmação de pedido
-
-Haverá uma confirmação simulada para registrar o pedido e atualizar o estoque.
-
-## DEC-007 — Desenvolvimento paralelo
-
-O front-end poderá utilizar dados mockados enquanto os endpoints do back-end estiverem sendo desenvolvidos.
-
-## DEC-008 — Carrinho
-
-O carrinho ficará associado ao usuário autenticado.
-
-## DEC-009 — API
-
-O contrato inicial da API será documentado pelo responsável pelo back-end antes das integrações.
-
-## Histórico
-
-| Data | Decisão | Responsável |
-|---|---|---|
-| A definir | Estrutura inicial do projeto | Rafael |
+- DEC-001: monorepositório com `frontend/`, `backend/` e `docs/`;
+- DEC-002: Next.js no front e API ESM NestJS/TypeScript no back;
+- DEC-003: MySQL 8.4 com Prisma 7 e schemas Zod como fonte dos DTOs/OpenAPI;
+- DEC-004: Better Auth para credenciais, sessões, verificação e recuperação;
+- DEC-005: checkout direto, sem `Cart` ou `CartItem` persistentes;
+- DEC-006: uma linha `TicketUnit` por ingresso, inspirada na reserva de inventário da Shopify;
+- DEC-007: transação `READ COMMITTED`, ordem estável e `FOR UPDATE SKIP LOCKED` para evitar oversell;
+- DEC-008: TTL absoluto de 15 minutos, heartbeat a cada 15 segundos e abandono após 60 segundos;
+- DEC-009: MinIO para uma capa e até seis imagens de galeria; falhas de remoção entram em fila persistente;
+- DEC-010: pagamento real fora do MVP; `PaymentGateway` simulado preserva o ponto de extensão;
+- DEC-011: OpenAPI da aplicação e do Better Auth separados, ambos selecionáveis no Swagger;
+- DEC-012: Docker Compose executa migrations, bucket e seed como serviços one-shot;
+- DEC-013: não adotar Redis, microsserviços, assentos, fila virtual, ProxySQL ou dual write no MVP.
