@@ -1,0 +1,5 @@
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+
+export class InviteDto extends createZodDto(z.object({ email: z.email().transform((value) => value.toLowerCase()) })) {}
+export class AcceptInvitationDto extends createZodDto(z.object({ token: z.string().min(32).max(500) })) {}
