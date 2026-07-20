@@ -1,43 +1,26 @@
-# Visão Geral
-
-## Contexto
-
-O projeto consiste no desenvolvimento de uma plataforma de gestão e comercialização simulada de ingressos para eventos locais.
+# Visão geral
 
 ## Objetivo
 
-Criar um e-commerce funcional e responsivo que permita visualizar eventos, selecionar ingressos, utilizar um carrinho e controlar a disponibilidade de ingressos.
+Oferecer uma plataforma responsiva para descobrir eventos locais, selecionar tipos de ingresso, reservar estoque durante o checkout, confirmar pedidos simulados, emitir ingressos individuais e validá-los na portaria.
 
-## Público-alvo
+## Jornada
 
-- Pessoas interessadas em eventos locais;
-- Organizadores de eventos;
-- Administradores da plataforma.
+```text
+evento → seleção local → checkout/reserva → confirmação → ingresso com QR → validação
+```
 
-## Escopo inicial
+A seleção anterior ao checkout vive somente no estado do front-end. Não há carrinho persistente. Cada checkout pertence a um evento e a reserva começa ao clicar em **Continuar**.
 
-O sistema terá:
+## Perfis
 
-- Página inicial;
-- Vitrine de eventos;
-- Filtros e pesquisa;
-- Detalhes dos eventos;
-- Cadastro e autenticação;
-- Carrinho;
-- Confirmação simulada de pedidos;
-- Controle de estoque;
-- Histórico de pedidos;
-- Painel administrativo.
+- Cliente: pesquisa, compra, consulta e cancela pedidos elegíveis;
+- Organizador: administra somente os próprios eventos, estoque, imagens, equipe e métricas;
+- Portaria: valida ingressos apenas dos eventos atribuídos;
+- Administrador: acesso global, categorias, usuários e convites de organizador.
 
-## Fora do escopo inicial
+Os papéis são cumulativos.
 
-Não fazem parte do MVP:
+## Fora do MVP
 
-- Pagamento real;
-- Integração bancária;
-- PIX real;
-- Cartão de crédito;
-- Reembolso;
-- Aplicativo móvel nativo.
-
-Esses recursos poderão ser adicionados futuramente.
+Pagamento real, assentos numerados, reembolso financeiro, transferência de titularidade, fila virtual, Redis, microsserviços e aplicativo móvel nativo.

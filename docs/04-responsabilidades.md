@@ -1,64 +1,17 @@
-# Responsabilidades da Equipe
+# Responsabilidades da equipe
 
-## Rafael Corrêa Barbosa — Gestão e estrutura geral
+## Rafael Corrêa Barbosa
 
-Responsável por:
+Gestão, GitHub/Kanban, documentação geral, navegação compartilhada, apresentação e plano de divulgação.
 
-- Gestão da equipe;
-- Organização do GitHub;
-- Organização do Kanban;
-- Documentação geral;
-- Registro de decisões;
-- Acompanhamento das entregas;
-- Navbar;
-- Rodapé;
-- Navegação geral;
-- Plano de tráfego pago;
-- Preparação da apresentação final.
+## Enzo — back-end
 
-## Enzo — Back-end
+Banco e migrations; Better Auth; perfis e permissões; categorias e eventos; mídia; tipos, unidades e capacidade; checkout sem carrinho; reservas concorrentes; pedidos, QR e portaria; convites; analytics; auditoria; Docker; Swagger/OpenAPI; cliente gerado e testes.
 
-Responsável por:
+## Perroni — front-end público e autenticação
 
-- Estrutura do back-end;
-- Banco de dados;
-- Cadastro de usuários;
-- Autenticação;
-- Eventos;
-- Tipos de ingresso;
-- Estoque;
-- Carrinho;
-- Pedidos;
-- Histórico;
-- Permissões administrativas;
-- Endpoints;
-- Documentação técnica da API.
+Página inicial, Hero, vitrine, cards, filtros, pesquisa, login, cadastro, verificação, recuperação e comportamento visual da sessão, integrados aos endpoints públicos e Better Auth.
 
-## Perroni — Front-end público
+## Marcelo Kian — front-end transacional e design
 
-Responsável por:
-
-- Página inicial;
-- Hero;
-- Vitrine;
-- Cards;
-- Filtros;
-- Pesquisa;
-- Telas de login e cadastro;
-- Integração dessas telas com os endpoints;
-- Responsividade de suas páginas.
-
-## Marcelo Kian — Design e front-end transacional
-
-Responsável por:
-
-- Identidade visual;
-- Consistência do design;
-- Página de detalhes do evento;
-- Seleção de ingressos;
-- Carrinho;
-- Confirmação do pedido;
-- Histórico;
-- Painel administrativo;
-- Integração dessas telas com os endpoints;
-- Responsividade de suas páginas.
+Detalhes do evento, seleção de tipos e quantidades, checkout e heartbeat, confirmação, histórico, ingressos, painel administrativo, design e responsividade. Não haverá tela de carrinho.

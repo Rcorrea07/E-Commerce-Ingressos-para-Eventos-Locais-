@@ -1,0 +1,128 @@
+name: ingressos-locais
+
+x-api-environment: &api-environment
+  NODE_ENV: development
+  PORT: 3001
+  FRONTEND_URL: http://localhost:3000
+  API_PUBLIC_URL: http://localhost:3001
+  DATABASE_URL: mysql://tickets:tickets@mysql:3306/tickets
+  DB_HOST: mysql
+  DB_PORT: 3306
+  DB_USER: tickets
+  DB_PASSWORD: tickets
+  DB_NAME: tickets
+  BETTER_AUTH_SECRET: local-development-secret-change-before-production
+  BETTER_AUTH_URL: http://localhost:3001
+  SMTP_HOST: mailpit
+  SMTP_PORT: 1025
+  SMTP_FROM: Ingressos Locais <nao-responda@ingressos.local>
+  MINIO_ENDPOINT: minio
+  MINIO_PORT: 9000
+  MINIO_USE_SSL: "false"
+  MINIO_ACCESS_KEY: minioadmin
+  MINIO_SECRET_KEY: minioadmin
+  MINIO_BUCKET: event-media
+  MINIO_PUBLIC_URL: http://localhost:9000
+  PII_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  PII_HASH_KEY: local-hash-secret-change-before-production
+  QR_SIGNING_SECRET: local-qr-secret-change-before-production
+  CHECKOUT_TTL_SECONDS: 900
+  CHECKOUT_PRESENCE_SECONDS: 60
+  SEED_ADMIN_EMAIL: admin@ingressos.local
+  SEED_ADMIN_PASSWORD: Admin123!Local
+  SEED_DEMO_DATA: "true"
+
+services:
+  mysql:
+    image: mysql:8.4.6
+    environment:
+      MYSQL_DATABASE: tickets
+      MYSQL_USER: tickets
+      MYSQL_PASSWORD: tickets
+      MYSQL_ROOT_PASSWORD: root-local-only
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    ports: ["3306:3306"]
+    volumes: ["mysql-data:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["minio-data:/data"]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      minio: { condition: service_healthy }
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 minioadmin minioadmin &&
+        mc mb --ignore-existing local/event-media &&
+        mc anonymous set download local/event-media
+    restart: "no"
+
+  mailpit:
+    image: axllent/mailpit:v1.30
+    ports: ["1025:1025", "8025:8025"]
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+
+  migrate:
+    build: { context: ./backend, target: runner }
+    environment: *api-environment
+    depends_on:
+      mysql: { condition: service_healthy }
+    command: ["./node_modules/.bin/prisma", "migrate", "deploy"]
+    restart: "no"
+
+  seed:
+    build: { context: ./backend, target: runner }
+    environment: *api-environment
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      minio-init: { condition: service_completed_successfully }
+      mailpit: { condition: service_started }
+    command: ["node", "dist/prisma/seed.js"]
+    restart: "no"
+
+  api:
+    build: { context: ./backend, target: runner }
+    environment: *api-environment
+    depends_on:
+      seed: { condition: service_completed_successfully }
+    ports: ["3001:3001"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  frontend:
+    build:
+      context: ./frontend
+      args: { NEXT_PUBLIC_API_URL: http://localhost:3001 }
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    depends_on:
+      api: { condition: service_healthy }
+    ports: ["3000:3000"]
+
+volumes:
+  mysql-data:
+  minio-data:
