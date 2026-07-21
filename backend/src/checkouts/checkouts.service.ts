@@ -11,6 +11,7 @@ import type { Env } from '../config/env.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { PAYMENT_GATEWAY, type PaymentGateway } from '../payments/payment.gateway.js';
 import { decryptPii } from '../security/pii.js';
+import { serializeOrder } from '../tickets/ticket.presenter.js';
 import type { CreateCheckoutDto } from './checkouts.dto.js';
 
 @Injectable()
@@ -158,7 +159,10 @@ export class CheckoutsService {
   async confirm(user: SessionUser, checkoutId: string, key: string) {
     assertIdempotencyKey(key);
     const prior = await this.prisma.idempotencyRecord.findUnique({ where: { userId_scope_key: { userId: user.id, scope: 'checkout:confirm', key } } });
-    if (prior?.resourceId) return this.prisma.order.findUnique({ where: { id: prior.resourceId }, include: { items: { include: { tickets: true } } } });
+    if (prior?.resourceId) {
+      const priorOrder = await this.prisma.order.findUnique({ where: { id: prior.resourceId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } } });
+      return priorOrder ? serializeOrder(priorOrder) : null;
+    }
     const candidate = await this.prisma.checkout.findFirst({ where: { id: checkoutId, userId: user.id }, include: { event: true } });
     if (!candidate) throw new NotFoundException('Checkout não encontrado.');
     if (candidate.status !== CheckoutStatus.ACTIVE) throw new ConflictException('Checkout não está ativo.');
@@ -213,7 +217,8 @@ export class CheckoutsService {
       await tx.idempotencyRecord.create({ data: { userId: user.id, scope: 'checkout:confirm', key, resourceId: orderId, responseCode: 201, expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 10_000 }));
     await this.audit.write({ actorId: user.id, action: AuditAction.ORDER_CONFIRMED, entityType: 'Order', entityId: orderId, metadata: { checkoutId } });
-    return this.prisma.order.findUniqueOrThrow({ where: { id: orderId }, include: { items: { include: { tickets: true } } } });
+    const order = await this.prisma.order.findUniqueOrThrow({ where: { id: orderId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } } });
+    return serializeOrder(order);
   }
 
   @Interval(10_000)
@@ -230,7 +235,7 @@ export class CheckoutsService {
   }
 
   private async release(checkoutId: string, status: CheckoutStatus, userId?: string): Promise<boolean> {
-    return this.withDeadlockRetry(() => this.prisma.$transaction(async (tx) => {
+    const changed = await this.withDeadlockRetry(() => this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw(Prisma.sql`SELECT id FROM Checkout WHERE id = ${checkoutId} FOR UPDATE`);
       const checkout = await tx.checkout.findFirst({ where: { id: checkoutId, ...(userId ? { userId } : {}) } });
       if (!checkout) {
@@ -242,6 +247,13 @@ export class CheckoutsService {
       await tx.checkout.update({ where: { id: checkoutId }, data: { status, terminalReason: status === CheckoutStatus.EXPIRED ? 'TTL_EXPIRED' : status === CheckoutStatus.ABANDONED ? 'PRESENCE_LOST' : 'USER_CANCELLED' } });
       return true;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted }));
+    if (changed && status === CheckoutStatus.EXPIRED) {
+      await this.audit.write({ action: AuditAction.CHECKOUT_EXPIRED, entityType: 'Checkout', entityId: checkoutId });
+    }
+    if (changed && status === CheckoutStatus.ABANDONED) {
+      await this.audit.write({ action: AuditAction.CHECKOUT_ABANDONED, entityType: 'Checkout', entityId: checkoutId });
+    }
+    return changed;
   }
 
   private async withDeadlockRetry<T>(operation: () => Promise<T>): Promise<T> {

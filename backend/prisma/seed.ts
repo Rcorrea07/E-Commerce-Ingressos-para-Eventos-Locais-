@@ -51,6 +51,23 @@ try {
       },
       update: {}
     });
+    const organizerCpf = '11144477735';
+    await prisma.userProfile.upsert({
+      where: { userId: organizer.id },
+      create: {
+        userId: organizer.id,
+        phone: '11988888888',
+        cpfEncrypted: encryptPii(organizerCpf, process.env.PII_ENCRYPTION_KEY!),
+        cpfHash: cpfHash(organizerCpf, process.env.PII_HASH_KEY!),
+        postalCode: '01001000',
+        street: 'Praça da Sé',
+        number: '200',
+        district: 'Sé',
+        city: 'São Paulo',
+        state: 'SP'
+      },
+      update: {}
+    });
     const category = await prisma.eventCategory.upsert({ where: { slug: 'musica' }, create: { name: 'Música', slug: 'musica' }, update: { active: true } });
     const startsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const endsAt = new Date(startsAt.getTime() + 4 * 60 * 60 * 1000);

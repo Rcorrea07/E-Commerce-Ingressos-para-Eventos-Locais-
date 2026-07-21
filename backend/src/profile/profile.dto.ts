@@ -16,3 +16,25 @@ export const profileSchema = z.object({
 });
 
 export class UpdateProfileDto extends createZodDto(profileSchema) {}
+
+const profileResponseSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.email(),
+  emailVerified: z.boolean(),
+  roles: z.array(z.string()),
+  profileComplete: z.boolean(),
+  profile: z.object({
+    phone: z.string(),
+    cpf: z.string(),
+    postalCode: z.string(),
+    street: z.string(),
+    number: z.string(),
+    complement: z.string().nullable(),
+    district: z.string(),
+    city: z.string(),
+    state: z.string()
+  }).nullable()
+});
+
+export class ProfileResponseDto extends createZodDto(profileResponseSchema) {}

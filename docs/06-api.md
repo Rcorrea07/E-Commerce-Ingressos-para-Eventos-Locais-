@@ -21,17 +21,25 @@ Base da aplicação: `/api/v1`. Autenticação Better Auth: `/api/auth/*`. Swagg
 | POST | `/orders/:id/cancel` | Cancelar; exige `Idempotency-Key` |
 | GET | `/tickets` e `/tickets/:id` | Ingressos e QR assinado |
 
-## Operação
+## Organização, portaria e administração
 
-- `/organizer/events/*`: eventos, publicação, cancelamento, tipos, capacidade, imagens e equipe;
-- `/organizer/analytics`: métricas do organizador;
+- `POST /organizer/activate`: ativação autônoma da Área do Produtor para conta verificada e completa;
+- `/organizer/events/*`: rascunhos, envio para análise, cancelamento, tipos, capacidade e imagens;
+- `/organizer/events/:eventId/staff-invitations/*`: listar, criar e revogar convites da portaria;
+- `/organizer/analytics`: totais, funil, disponibilidade, ocupação, ranking, validações e pedidos recentes dos próprios eventos;
 - `/gate/events` e `/gate/tickets/validate`: eventos atribuídos e leitura de QR;
-- `/admin/users`, `/admin/organizer-invitations` e `/admin/analytics`: administração global;
-- `/invitations/*/accept`: aceite autenticado de convite;
+- `/admin/events`, `/admin/orders`, `/admin/tickets` e `/admin/users`: consultas globais paginadas;
+- `/admin/events/:id/approve` e `/admin/events/:id/reject`: moderação e publicação de eventos;
+- `/admin/analytics`: métricas globais;
+- `/invitations/staff/accept`: aceite autenticado de convite da portaria;
 - `/health/live` e `/health/ready`: saúde do processo e dependências.
 
-## Convenções
+Somente um convite de portaria pendente pode existir para o mesmo e-mail e evento. Convites aceitos, expirados ou revogados liberam uma nova tentativa. As respostas de listagem nunca incluem `tokenHash` nem a chave interna de deduplicação.
 
-IDs são strings; datas ISO 8601 UTC; dinheiro usa `priceCents` e `currency: "BRL"`; paginação retorna `{ data, pagination }`. Falhas usam `application/problem+json` com `status`, `code`, `title`, `detail`, `requestId` e, quando aplicável, erros de campos.
+O fluxo detalhado para integrar a Área do Produtor está em [`07-area-produtor-frontend.md`](07-area-produtor-frontend.md).
 
-O contrato completo e versionável está em [`openapi.json`](openapi.json); autenticação está em [`auth-openapi.json`](auth-openapi.json). O front deve usar o cliente gerado em `frontend/src/lib/api` para as rotas da aplicação e o cliente oficial do Better Auth para identidade.
+## Convenções e contrato
+
+IDs são strings; datas usam ISO 8601 UTC; dinheiro usa `priceCents` e `currency: "BRL"`; paginação retorna `{ data, pagination }`. Falhas usam `application/problem+json` com `status`, `code`, `title`, `detail`, `requestId` e, quando aplicável, erros de campos.
+
+Cada operação no OpenAPI possui `summary`, schema de sucesso, erros esperados e indicação de autenticação por cookie quando protegida. O contrato completo está em [`openapi.json`](openapi.json); autenticação está em [`auth-openapi.json`](auth-openapi.json). O front deve usar o cliente gerado em `frontend/src/lib/api` para as rotas da aplicação e o cliente oficial do Better Auth para identidade.

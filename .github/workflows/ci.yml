@@ -47,6 +47,9 @@ jobs:
       - name: Instalar back-end
         working-directory: backend
         run: npm ci
+      - name: Auditar dependências de produção do back-end
+        working-directory: backend
+        run: npm audit --omit=dev
       - name: Gerar Prisma e aplicar migrations
         working-directory: backend
         run: npm run prisma:generate && npm run prisma:deploy
@@ -58,7 +61,7 @@ jobs:
         run: npm run openapi:generate
       - name: Instalar e verificar front-end
         working-directory: frontend
-        run: npm ci && npm run api:generate && npm run lint && npm run build
+        run: npm ci && npm audit --omit=dev && npm run api:generate && npm run lint && npm run build
       - name: Garantir contratos atualizados
         run: git diff --exit-code -- docs/openapi.json docs/auth-openapi.json frontend/src/lib/api/schema.d.ts
       - name: Validar Compose

@@ -57,7 +57,7 @@ cd backend && npm run openapi:generate
 cd ../frontend && npm run api:generate
 ```
 
-Documentação detalhada: [`docs/01-visao-geral.md`](docs/01-visao-geral.md), [`docs/03-regras-de-negocio.md`](docs/03-regras-de-negocio.md) e [`docs/06-api.md`](docs/06-api.md).
+Documentação detalhada: [`docs/01-visao-geral.md`](docs/01-visao-geral.md), [`docs/03-regras-de-negocio.md`](docs/03-regras-de-negocio.md), [`docs/06-api.md`](docs/06-api.md) e [`docs/07-area-produtor-frontend.md`](docs/07-area-produtor-frontend.md).
 
 ## Equipe
 

@@ -9,6 +9,8 @@ datasource db {
 
 enum EventStatus {
   DRAFT
+  PENDING_REVIEW
+  REJECTED
   PUBLISHED
   CANCELLED
 }
@@ -50,11 +52,18 @@ enum InvitationStatus {
   REVOKED
   EXPIRED
 }
+
 enum AuditAction {
   ORGANIZER_INVITED
   ORGANIZER_INVITE_ACCEPTED
+  ORGANIZER_INVITE_REVOKED
+  ORGANIZER_SELF_ACTIVATED
   STAFF_INVITED
   STAFF_INVITE_ACCEPTED
+  STAFF_INVITE_REVOKED
+  EVENT_SUBMITTED
+  EVENT_APPROVED
+  EVENT_REJECTED
   EVENT_PUBLISHED
   EVENT_CANCELLED
   CAPACITY_CHANGED
@@ -68,25 +77,26 @@ enum AuditAction {
 }
 
 model User {
-  id            String    @id @default(uuid()) @db.Char(36)
-  name          String    @db.VarChar(160)
-  email         String    @unique @db.VarChar(255)
-  emailVerified Boolean   @default(false)
-  image         String?   @db.VarChar(2048)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role          String    @default("customer") @db.VarChar(255)
-  banned        Boolean   @default(false)
-  banReason     String?   @db.VarChar(500)
-  banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
-  profile       UserProfile?
-  events        Event[]
-  checkouts     Checkout[]
-  orders        Order[]
-  tickets       IssuedTicket[]
-  staffLinks    EventStaff[]
+  id             String         @id @default(uuid()) @db.Char(36)
+  name           String         @db.VarChar(160)
+  email          String         @unique @db.VarChar(255)
+  emailVerified  Boolean        @default(false)
+  image          String?        @db.VarChar(2048)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  role           String         @default("customer") @db.VarChar(255)
+  banned         Boolean        @default(false)
+  banReason      String?        @db.VarChar(500)
+  banExpires     DateTime?
+  sessions       Session[]
+  accounts       Account[]
+  profile        UserProfile?
+  events         Event[]        @relation("EventOrganizer")
+  reviewedEvents Event[]        @relation("EventReviewer")
+  checkouts      Checkout[]
+  orders         Order[]
+  tickets        IssuedTicket[]
+  staffLinks     EventStaff[]
 }
 
 model Session {
@@ -100,6 +110,7 @@ model Session {
   userId         String   @db.Char(36)
   impersonatedBy String?  @db.Char(36)
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
@@ -118,8 +129,9 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@index([userId])
+
   @@unique([providerId, accountId])
+  @@index([userId])
 }
 
 model Verification {
@@ -129,24 +141,25 @@ model Verification {
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
   @@index([identifier])
 }
 
 model UserProfile {
-  userId          String   @id @db.Char(36)
-  phone           String   @db.VarChar(20)
-  cpfEncrypted    String   @db.Text
-  cpfHash         String   @unique @db.Char(64)
-  postalCode      String   @db.Char(8)
-  street          String   @db.VarChar(180)
-  number          String   @db.VarChar(20)
-  complement      String?  @db.VarChar(100)
-  district        String   @db.VarChar(100)
-  city            String   @db.VarChar(100)
-  state           String   @db.Char(2)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String   @id @db.Char(36)
+  phone        String   @db.VarChar(20)
+  cpfEncrypted String   @db.Text
+  cpfHash      String   @unique @db.Char(64)
+  postalCode   String   @db.Char(8)
+  street       String   @db.VarChar(180)
+  number       String   @db.VarChar(20)
+  complement   String?  @db.VarChar(100)
+  district     String   @db.VarChar(100)
+  city         String   @db.VarChar(100)
+  state        String   @db.Char(2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model EventCategory {
@@ -160,40 +173,48 @@ model EventCategory {
 }
 
 model Event {
-  id           String      @id @default(uuid()) @db.Char(36)
-  organizerId  String      @db.Char(36)
-  categoryId   String      @db.Char(36)
-  title        String      @db.VarChar(180)
-  slug         String      @unique @db.VarChar(220)
-  description  String      @db.Text
-  venueName    String      @db.VarChar(180)
-  postalCode   String      @db.Char(8)
-  street       String      @db.VarChar(180)
-  number       String      @db.VarChar(20)
-  complement   String?     @db.VarChar(100)
-  district     String      @db.VarChar(100)
-  city         String      @db.VarChar(100)
-  state        String      @db.Char(2)
-  startsAt     DateTime
-  endsAt       DateTime
-  timezone     String      @default("America/Sao_Paulo") @db.VarChar(80)
-  status       EventStatus @default(DRAFT)
-  publishedAt  DateTime?
-  cancelledAt  DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  organizer    User        @relation(fields: [organizerId], references: [id], onDelete: Restrict)
-  category     EventCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  images       EventImage[]
-  ticketTypes  TicketType[]
-  checkouts    Checkout[]
-  orders       Order[]
-  tickets      IssuedTicket[]
-  staff        EventStaff[]
-  staffInvites StaffInvitation[]
+  id              String            @id @default(uuid()) @db.Char(36)
+  organizerId     String            @db.Char(36)
+  categoryId      String            @db.Char(36)
+  title           String            @db.VarChar(180)
+  slug            String            @unique @db.VarChar(220)
+  description     String            @db.Text
+  venueName       String            @db.VarChar(180)
+  postalCode      String            @db.Char(8)
+  street          String            @db.VarChar(180)
+  number          String            @db.VarChar(20)
+  complement      String?           @db.VarChar(100)
+  district        String            @db.VarChar(100)
+  city            String            @db.VarChar(100)
+  state           String            @db.Char(2)
+  startsAt        DateTime
+  endsAt          DateTime
+  timezone        String            @default("America/Sao_Paulo") @db.VarChar(80)
+  status          EventStatus       @default(DRAFT)
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  reviewedById    String?           @db.Char(36)
+  rejectionReason String?           @db.VarChar(1000)
+  publishedAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  organizer       User              @relation("EventOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+  reviewedBy      User?             @relation("EventReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  category        EventCategory     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images          EventImage[]
+  ticketTypes     TicketType[]
+  checkouts       Checkout[]
+  orders          Order[]
+  tickets         IssuedTicket[]
+  staff           EventStaff[]
+  staffInvites    StaffInvitation[]
+
   @@index([status, startsAt])
   @@index([categoryId, startsAt])
   @@index([organizerId, createdAt])
+  @@index([status, submittedAt])
+  @@index([reviewedById])
   @@index([city, startsAt])
 }
 
@@ -207,27 +228,29 @@ model EventImage {
   position  Int
   createdAt DateTime       @default(now())
   event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, position])
   @@index([eventId, kind])
 }
 
 model TicketType {
-  id           String   @id @default(uuid()) @db.Char(36)
-  eventId      String   @db.Char(36)
-  name         String   @db.VarChar(120)
-  description  String?  @db.VarChar(500)
-  priceCents   Int
-  capacity     Int
-  maxPerOrder  Int      @default(10)
-  saleStartsAt DateTime?
-  saleEndsAt   DateTime?
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  units        TicketUnit[]
+  id            String         @id @default(uuid()) @db.Char(36)
+  eventId       String         @db.Char(36)
+  name          String         @db.VarChar(120)
+  description   String?        @db.VarChar(500)
+  priceCents    Int
+  capacity      Int
+  maxPerOrder   Int            @default(10)
+  saleStartsAt  DateTime?
+  saleEndsAt    DateTime?
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  units         TicketUnit[]
   checkoutItems CheckoutItem[]
-  orderItems   OrderItem[]
+  orderItems    OrderItem[]
+
   @@unique([eventId, name])
   @@index([eventId, active])
 }
@@ -240,6 +263,7 @@ model TicketUnit {
   updatedAt    DateTime         @updatedAt
   ticketType   TicketType       @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
   checkout     Checkout?        @relation(fields: [checkoutId], references: [id], onDelete: SetNull)
+
   @@id([ticketTypeId, sequence])
   @@index([ticketTypeId, status, sequence])
   @@index([checkoutId])
@@ -262,6 +286,7 @@ model Checkout {
   items           CheckoutItem[]
   units           TicketUnit[]
   order           Order?
+
   @@index([userId, status])
   @@index([status, expiresAt])
   @@index([status, lastHeartbeatAt])
@@ -269,13 +294,14 @@ model Checkout {
 }
 
 model CheckoutItem {
-  checkoutId       String @db.Char(36)
-  ticketTypeId     String @db.Char(36)
-  quantity         Int
-  unitPriceCents   Int
-  ticketTypeName   String @db.VarChar(120)
-  checkout         Checkout @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
-  ticketType       TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+  checkoutId     String     @db.Char(36)
+  ticketTypeId   String     @db.Char(36)
+  quantity       Int
+  unitPriceCents Int
+  ticketTypeName String     @db.VarChar(120)
+  checkout       Checkout   @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
+  ticketType     TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+
   @@id([checkoutId, ticketTypeId])
 }
 
@@ -301,54 +327,45 @@ model Order {
   user             User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   event            Event       @relation(fields: [eventId], references: [id], onDelete: Restrict)
   items            OrderItem[]
+
   @@index([userId, createdAt])
   @@index([eventId, createdAt])
   @@index([status, createdAt])
 }
 
 model OrderItem {
-  id             String   @id @default(uuid()) @db.Char(36)
-  orderId        String   @db.Char(36)
-  ticketTypeId   String   @db.Char(36)
-  ticketTypeName String   @db.VarChar(120)
+  id             String         @id @default(uuid()) @db.Char(36)
+  orderId        String         @db.Char(36)
+  ticketTypeId   String         @db.Char(36)
+  ticketTypeName String         @db.VarChar(120)
   unitPriceCents Int
   quantity       Int
-  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  ticketType     TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ticketType     TicketType     @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
   tickets        IssuedTicket[]
+
   @@index([orderId])
 }
 
 model IssuedTicket {
-  id              String       @id @default(uuid()) @db.Char(36)
-  publicId        String       @unique @db.VarChar(40)
-  orderItemId     String       @db.Char(36)
-  ownerId         String       @db.Char(36)
-  eventId         String       @db.Char(36)
-  ticketTypeId    String       @db.Char(36)
-  unitSequence    Int
-  status          TicketStatus @default(ISSUED)
-  validatedAt     DateTime?
-  validatedById   String?      @db.Char(36)
-  createdAt       DateTime     @default(now())
-  orderItem       OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
-  owner           User         @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  event           Event        @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  id            String       @id @default(uuid()) @db.Char(36)
+  publicId      String       @unique @db.VarChar(40)
+  orderItemId   String       @db.Char(36)
+  ownerId       String       @db.Char(36)
+  eventId       String       @db.Char(36)
+  ticketTypeId  String       @db.Char(36)
+  unitSequence  Int
+  status        TicketStatus @default(ISSUED)
+  validatedAt   DateTime?
+  validatedById String?      @db.Char(36)
+  createdAt     DateTime     @default(now())
+  orderItem     OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  owner         User         @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  event         Event        @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
   @@index([ownerId, createdAt])
   @@index([eventId, status])
   @@index([ticketTypeId, unitSequence])
-}
-
-model OrganizerInvitation {
-  id          String           @id @default(uuid()) @db.Char(36)
-  email       String           @db.VarChar(255)
-  tokenHash   String           @unique @db.Char(64)
-  invitedById String           @db.Char(36)
-  status      InvitationStatus @default(PENDING)
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  createdAt   DateTime         @default(now())
-  @@index([email, status])
 }
 
 model StaffInvitation {
@@ -356,12 +373,14 @@ model StaffInvitation {
   eventId     String           @db.Char(36)
   email       String           @db.VarChar(255)
   tokenHash   String           @unique @db.Char(64)
+  dedupKey    String?          @unique @db.Char(64)
   invitedById String           @db.Char(36)
   status      InvitationStatus @default(PENDING)
   expiresAt   DateTime
   acceptedAt  DateTime?
   createdAt   DateTime         @default(now())
   event       Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
   @@index([email, status])
   @@index([eventId, status])
 }
@@ -372,6 +391,7 @@ model EventStaff {
   createdAt DateTime @default(now())
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@id([eventId, userId])
   @@index([userId])
 }
@@ -386,6 +406,7 @@ model AuditLog {
   ipAddress  String?     @db.VarChar(64)
   userAgent  String?     @db.Text
   createdAt  DateTime    @default(now())
+
   @@index([entityType, entityId, createdAt])
   @@index([actorId, createdAt])
 }
@@ -400,6 +421,7 @@ model IdempotencyRecord {
   responseJson Json?
   expiresAt    DateTime
   createdAt    DateTime @default(now())
+
   @@unique([userId, scope, key])
   @@index([expiresAt])
 }
@@ -411,5 +433,6 @@ model MediaDeletion {
   lastError   String?  @db.Text
   nextRetryAt DateTime @default(now())
   createdAt   DateTime @default(now())
+
   @@index([nextRetryAt])
 }

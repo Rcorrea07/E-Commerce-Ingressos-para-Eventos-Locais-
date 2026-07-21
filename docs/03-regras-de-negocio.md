@@ -16,5 +16,10 @@
 - RN14: cancelamento de pedido invalida QRs e devolve unidades ao estoque;
 - RN15: cancelamento de evento encerra vendas, libera checkouts e cancela ingressos;
 - RN16: organizador acessa apenas seus eventos, portaria apenas eventos atribuídos e admin possui acesso global;
-- RN17: criação/confirmacão de checkout e cancelamento de pedido exigem `Idempotency-Key`;
-- RN18: pagamento do MVP é simulado por uma implementação de `PaymentGateway`.
+- RN17: criação/confirmação de checkout e cancelamento de pedido exigem `Idempotency-Key`;
+- RN18: pagamento do MVP é simulado por uma implementação de `PaymentGateway`;
+- RN19: existe no máximo um convite de portaria pendente por e-mail e evento; aceite, expiração ou revogação libera nova tentativa;
+- RN20: hashes de convite, snapshots completos de endereço e payloads de QR nunca aparecem em consultas administrativas.
+- RN21: cliente com e-mail verificado e perfil completo ativa o papel cumulativo `organizer` sem convite;
+- RN22: eventos seguem `DRAFT/REJECTED → PENDING_REVIEW → PUBLISHED ou REJECTED`, e somente admin modera;
+- RN23: evento em análise é imutável; evento publicado permite apenas ajuste de capacidade e cancelamento.
