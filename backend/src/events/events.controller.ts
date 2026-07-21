@@ -1,7 +1,9 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiProblems } from '../common/openapi.decorators.js';
 import { Public } from '../common/public.decorator.js';
 import { EventQueryDto } from './events.dto.js';
+import { AvailabilityResponseDto, EventListResponseDto, PublicEventResponseDto } from './events.response.js';
 import { EventsService } from './events.service.js';
 
 @Public()
@@ -9,10 +11,22 @@ import { EventsService } from './events.service.js';
 @Controller('api/v1/events')
 export class EventsController {
   constructor(private readonly service: EventsService) {}
+
   @ApiOperation({ summary: 'Listar e filtrar eventos publicados' })
-  @Get() list(@Query() query: EventQueryDto) { return this.service.list(query); }
+  @ApiOkResponse({ type: EventListResponseDto })
+  @ApiProblems(400)
+  @Get()
+  list(@Query() query: EventQueryDto) { return this.service.list(query); }
+
   @ApiOperation({ summary: 'Consultar disponibilidade do evento' })
-  @Get(':id/availability') availability(@Param('id') id: string) { return this.service.availability(id); }
+  @ApiOkResponse({ type: AvailabilityResponseDto })
+  @ApiProblems(404)
+  @Get(':id/availability')
+  availability(@Param('id') id: string) { return this.service.availability(id); }
+
   @ApiOperation({ summary: 'Consultar evento pelo slug' })
-  @Get(':slug') bySlug(@Param('slug') slug: string) { return this.service.bySlug(slug); }
+  @ApiOkResponse({ type: PublicEventResponseDto })
+  @ApiProblems(404)
+  @Get(':slug')
+  bySlug(@Param('slug') slug: string) { return this.service.bySlug(slug); }
 }

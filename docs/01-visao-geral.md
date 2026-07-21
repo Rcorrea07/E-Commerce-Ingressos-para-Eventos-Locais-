@@ -15,11 +15,13 @@ A seleção anterior ao checkout vive somente no estado do front-end. Não há c
 ## Perfis
 
 - Cliente: pesquisa, compra, consulta e cancela pedidos elegíveis;
-- Organizador: administra somente os próprios eventos, estoque, imagens, equipe e métricas;
+- Organizador: ativa a Área do Produtor com perfil completo e administra somente os próprios eventos, estoque, imagens, equipe e métricas;
 - Portaria: valida ingressos apenas dos eventos atribuídos;
-- Administrador: acesso global, categorias, usuários e convites de organizador.
+- Administrador: acesso global a eventos, pedidos, ingressos, usuários, analytics, categorias e moderação de eventos.
 
 Os papéis são cumulativos.
+
+Eventos são criados em `DRAFT`, enviados para `PENDING_REVIEW` e somente ficam públicos após aprovação administrativa. Uma rejeição retorna o evento ao produtor com justificativa para edição e reenvio.
 
 ## Fora do MVP
 

@@ -13,8 +13,7 @@ export class MaintenanceService {
     const now = new Date();
     await Promise.all([
       this.prisma.idempotencyRecord.deleteMany({ where: { expiresAt: { lte: now } } }),
-      this.prisma.organizerInvitation.updateMany({ where: { status: InvitationStatus.PENDING, expiresAt: { lte: now } }, data: { status: InvitationStatus.EXPIRED } }),
-      this.prisma.staffInvitation.updateMany({ where: { status: InvitationStatus.PENDING, expiresAt: { lte: now } }, data: { status: InvitationStatus.EXPIRED } })
+      this.prisma.staffInvitation.updateMany({ where: { status: InvitationStatus.PENDING, expiresAt: { lte: now } }, data: { status: InvitationStatus.EXPIRED, dedupKey: null } })
     ]);
     const pending = await this.prisma.mediaDeletion.findMany({ where: { nextRetryAt: { lte: now } }, take: 20 });
     for (const item of pending) {

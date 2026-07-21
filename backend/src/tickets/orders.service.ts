@@ -8,19 +8,21 @@ import type { Env } from '../config/env.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { ProblemException } from '../common/problem.exception.js';
 import { createQrPayload, verifyQrPayload } from './qr.js';
+import { serializeOrder, serializeTicket } from './ticket.presenter.js';
 
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService<Env, true>, private readonly audit: AuditService) {}
 
-  listOrders(userId: string) {
-    return this.prisma.order.findMany({ where: { userId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } }, orderBy: { createdAt: 'desc' } });
+  async listOrders(userId: string) {
+    const orders = await this.prisma.order.findMany({ where: { userId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } }, orderBy: { createdAt: 'desc' } });
+    return orders.map(serializeOrder);
   }
 
   async getOrder(userId: string, id: string) {
-    const order = await this.prisma.order.findFirst({ where: { id, userId }, include: { items: { include: { tickets: true } } } });
+    const order = await this.prisma.order.findFirst({ where: { id, userId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } } });
     if (!order) throw new NotFoundException('Pedido não encontrado.');
-    return order;
+    return serializeOrder(order);
   }
 
   async cancelOrder(userId: string, orderId: string, key: string) {
@@ -51,18 +53,18 @@ export class OrdersService {
   }
 
   async listTickets(userId: string) {
-    const tickets = await this.prisma.issuedTicket.findMany({ where: { ownerId: userId }, include: { event: true, orderItem: true }, orderBy: { createdAt: 'desc' } });
+    const tickets = await this.prisma.issuedTicket.findMany({ where: { ownerId: userId }, include: { event: true, orderItem: { include: { order: { select: { publicId: true } } } } }, orderBy: { createdAt: 'desc' } });
     return tickets.map((ticket) => this.withQr(ticket));
   }
 
   async getTicket(userId: string, id: string) {
-    const ticket = await this.prisma.issuedTicket.findFirst({ where: { id, ownerId: userId }, include: { event: true, orderItem: true } });
+    const ticket = await this.prisma.issuedTicket.findFirst({ where: { id, ownerId: userId }, include: { event: true, orderItem: { include: { order: { select: { publicId: true } } } } } });
     if (!ticket) throw new NotFoundException('Ingresso não encontrado.');
     return this.withQr(ticket);
   }
 
   private withQr<T extends { publicId: string }>(ticket: T) {
-    return { ...ticket, qrPayload: createQrPayload(ticket.publicId, this.config.get('QR_SIGNING_SECRET', { infer: true })) };
+    return serializeTicket(ticket, createQrPayload(ticket.publicId, this.config.get('QR_SIGNING_SECRET', { infer: true })));
   }
 
   async gateEvents(user: SessionUser) {

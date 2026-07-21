@@ -1,0 +1,41 @@
+-- Existing organizer roles and published events are intentionally preserved.
+ALTER TABLE `Event`
+  MODIFY `status` ENUM('DRAFT', 'PENDING_REVIEW', 'REJECTED', 'PUBLISHED', 'CANCELLED') NOT NULL DEFAULT 'DRAFT',
+  ADD COLUMN `submittedAt` DATETIME(3) NULL,
+  ADD COLUMN `reviewedAt` DATETIME(3) NULL,
+  ADD COLUMN `reviewedById` CHAR(36) NULL,
+  ADD COLUMN `rejectionReason` VARCHAR(1000) NULL;
+
+CREATE INDEX `Event_status_submittedAt_idx` ON `Event`(`status`, `submittedAt`);
+CREATE INDEX `Event_reviewedById_idx` ON `Event`(`reviewedById`);
+
+ALTER TABLE `Event`
+  ADD CONSTRAINT `Event_reviewedById_fkey`
+  FOREIGN KEY (`reviewedById`) REFERENCES `User`(`id`)
+  ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `AuditLog`
+  MODIFY `action` ENUM(
+    'ORGANIZER_INVITED',
+    'ORGANIZER_INVITE_ACCEPTED',
+    'ORGANIZER_INVITE_REVOKED',
+    'ORGANIZER_SELF_ACTIVATED',
+    'STAFF_INVITED',
+    'STAFF_INVITE_ACCEPTED',
+    'STAFF_INVITE_REVOKED',
+    'EVENT_SUBMITTED',
+    'EVENT_APPROVED',
+    'EVENT_REJECTED',
+    'EVENT_PUBLISHED',
+    'EVENT_CANCELLED',
+    'CAPACITY_CHANGED',
+    'CHECKOUT_CREATED',
+    'CHECKOUT_CANCELLED',
+    'CHECKOUT_EXPIRED',
+    'CHECKOUT_ABANDONED',
+    'ORDER_CONFIRMED',
+    'ORDER_CANCELLED',
+    'TICKET_VALIDATED'
+  ) NOT NULL;
+
+DROP TABLE `OrganizerInvitation`;

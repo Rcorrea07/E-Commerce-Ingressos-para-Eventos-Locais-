@@ -13,3 +13,4 @@
 - DEC-011: OpenAPI da aplicação e do Better Auth separados, ambos selecionáveis no Swagger;
 - DEC-012: Docker Compose executa migrations, bucket e seed como serviços one-shot;
 - DEC-013: não adotar Redis, microsserviços, assentos, fila virtual, ProxySQL ou dual write no MVP.
+- DEC-014: adesão de organizador é autônoma para contas verificadas e completas; a confiança é aplicada por moderação administrativa de cada evento antes da publicação.

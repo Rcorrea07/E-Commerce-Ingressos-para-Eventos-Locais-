@@ -67,6 +67,7 @@ Use npm e preserve as versões fixadas e os arquivos `package-lock.json`. Não t
 
 - Cadastro público sempre cria um cliente.
 - Papéis do domínio: `customer`, `organizer`, `gate_staff` e `admin`.
+- Cliente com e-mail verificado e perfil completo pode ativar o papel cumulativo `organizer` sem convite.
 - Organizador acessa apenas seus eventos.
 - Portaria valida apenas eventos atribuídos.
 - Admin tem acesso global.
@@ -76,8 +77,10 @@ Use npm e preserve as versões fixadas e os arquivos `package-lock.json`. Não t
 
 ### Eventos e mídia
 
-- Estados do evento: `DRAFT`, `PUBLISHED` e `CANCELLED`.
-- Publicação exige categoria, local, capa, datas válidas e tipo de ingresso ativo.
+- Estados do evento: `DRAFT`, `PENDING_REVIEW`, `REJECTED`, `PUBLISHED` e `CANCELLED`.
+- O organizador envia o evento para análise; somente o admin aprova e publica.
+- O envio exige categoria, local, capa, datas válidas e tipo de ingresso ativo.
+- Eventos em análise são imutáveis; após publicação, apenas capacidade e cancelamento podem mudar.
 - Eventos esgotados permanecem visíveis.
 - Um evento possui uma capa e até seis imagens de galeria.
 - Aceitar somente JPG, PNG e WebP de até 5 MB, validando MIME e assinatura binária.

@@ -80,6 +80,8 @@ O Better Auth atende `/api/auth/*` e mantém as sessões no MySQL. O cadastro p�
 
 O front não deve guardar token manualmente. A autenticação usa cookie HttpOnly e todas as requisições devem enviar credenciais.
 
+Qualquer cliente com e-mail verificado e perfil completo pode ativar a Área do Produtor em `POST /api/v1/organizer/activate`. A operação é idempotente e adiciona `organizer` sem remover os demais papéis.
+
 ### Perfil e CPF
 
 O checkout só é permitido quando o e-mail está verificado e o perfil está completo. O CPF:
@@ -91,7 +93,7 @@ O checkout só é permitido quando o e-mail está verificado e o perfil está co
 
 ### Eventos e tipos de ingresso
 
-O organizador cria eventos inicialmente como `DRAFT`. Para publicar, o evento precisa ter local, categoria, datas futuras, capa e ao menos um tipo ativo.
+O organizador cria eventos inicialmente como `DRAFT`. Depois de completar local, categoria, datas futuras, capa e ao menos um tipo ativo, envia o evento para `PENDING_REVIEW`. Somente um administrador pode aprovar e alterar o estado para `PUBLISHED`; rejeições incluem uma justificativa e permitem edição e reenvio.
 
 Cada `TicketType` representa uma categoria comercial, por exemplo inteira, meia, VIP ou lote promocional. Ele define preço, capacidade, janela de venda e limite por pedido.
 
@@ -124,6 +126,18 @@ Um job executado a cada 10 segundos procura reservas vencidas ou abandonadas.
 A confirmação simulada transforma as unidades em `SOLD`, cria um pedido com snapshots e emite um ingresso individual por unidade. O QR contém apenas o ID público e uma assinatura HMAC.
 
 A primeira leitura autorizada marca o ingresso como `USED`. Uma nova leitura retorna `TICKET_ALREADY_USED`. A ordem dos locks também impede que o cancelamento devolva ao estoque uma unidade usada simultaneamente.
+
+### Convites
+
+Organizadores convidam a equipe de portaria de seus próprios eventos. Um e-mail pode ter apenas um convite `PENDING` por evento. O convite pode ser aceito, revogado ou marcado como expirado; ao chegar a um estado terminal, uma nova tentativa é permitida. Listagens não devolvem hashes de token nem chaves internas de deduplicação.
+
+As operações de criação, aceite e revogação são registradas na auditoria. Os links continuam disponíveis localmente pelo Mailpit.
+
+### Administração e analytics
+
+O administrador consulta eventos, pedidos, ingressos e usuários em `/api/v1/admin/*`, com paginação e filtros validados por Zod. Pedidos administrativos não expõem o snapshot de endereço do comprador, e as consultas de ingressos não retornam o QR.
+
+Analytics de organizador e administrador incluem totais de eventos, pedidos e ingressos, reservas ativas, receita simulada, disponibilidade, ocupação, ranking, validações por hora e pedidos recentes.
 
 ### Imagens e e-mail
 
