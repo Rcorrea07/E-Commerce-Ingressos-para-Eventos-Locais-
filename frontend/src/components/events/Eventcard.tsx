@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 import { Event } from "@/mocks/events";
 
@@ -42,9 +43,12 @@ export function EventCard({ event }: EventCardProps) {
         </p>
         <div className="mt-3 flex items-center justify-between">
           <span className="text-lg font-bold text-purple-400">{formattedPrice}</span>
-          <button className="text-sm font-medium text-purple-400 hover:text-purple-300 hover:underline transition">
-            Ver evento →
-          </button>
+            <Link 
+              href={`/checkout?id=${event.id}`}
+              className="text-sm font-medium text-purple-400 hover:text-purple-300 hover:underline transition"
+            >
+              Ver evento →
+          </Link>
         </div>
       </div>
     </div>
