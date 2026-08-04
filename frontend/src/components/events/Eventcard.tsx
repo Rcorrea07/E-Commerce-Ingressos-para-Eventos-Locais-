@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Event } from "@/mocks/events";
 
 interface EventCardProps {
@@ -17,7 +18,13 @@ export function EventCard({ event }: EventCardProps) {
     <div className="bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-700 flex flex-col h-full overflow-hidden">
       <div className="relative h-48 w-full bg-gray-700 shrink-0">
         {event.image ? (
-          <Image src={event.image} alt={event.name} fill className="object-cover" />
+          <Image
+            src={event.image}
+            alt={event.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+          />
         ) : (
           <div className="w-full h-full bg-linear-to-br from-purple-700 to-purple-900 flex items-center justify-center text-4xl">
             🎉
@@ -42,9 +49,12 @@ export function EventCard({ event }: EventCardProps) {
         </p>
         <div className="mt-3 flex items-center justify-between">
           <span className="text-lg font-bold text-purple-400">{formattedPrice}</span>
-          <button className="text-sm font-medium text-purple-400 hover:text-purple-300 hover:underline transition">
+          <Link
+            href={`/event/${event.id}`}
+            className="text-sm font-medium text-purple-400 hover:text-purple-300 hover:underline transition"
+          >
             Ver evento →
-          </button>
+          </Link>
         </div>
       </div>
     </div>
