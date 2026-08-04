@@ -152,7 +152,7 @@ export function CheckoutExperience({ checkoutId }: { checkoutId: string }) {
 
   return (
     <main className="content-grid py-8 sm:py-12">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between gap-4">
           <Button variant="ghost" asChild className="-ml-3 text-muted-foreground"><Link href={checkout.event?.slug ? `/eventos/${checkout.event.slug}` : "/"}><ChevronLeft /> Voltar</Link></Button>
           <Badge variant="outline"><LockKeyhole /> Checkout seguro</Badge>
@@ -168,15 +168,14 @@ export function CheckoutExperience({ checkoutId }: { checkoutId: string }) {
 
         {(error || terminal) && <Alert variant="destructive" role="alert" className="mb-6"><AlertTitle>Reserva encerrada</AlertTitle><AlertDescription>{error ?? `Status atual: ${checkoutStatusLabels[checkout.status]}`}</AlertDescription></Alert>}
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="space-y-6">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[.2em] text-primary">Checkout temporário</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] text-white">Finalize sua experiência</h1>
-              {checkout.event && <p className="mt-2 text-sm text-muted-foreground">{checkout.event.title} · {formatDateTime(checkout.event.startsAt)}</p>}
-            </div>
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-[.2em] text-primary">Checkout temporário</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] text-white">Finalize sua experiência</h1>
+          {checkout.event && <p className="mt-2 text-sm text-muted-foreground">{checkout.event.title} · {formatDateTime(checkout.event.startsAt)}</p>}
+        </div>
 
-            <Card>
+        <div className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,23rem)]">
+          <Card className="h-full">
               <CardHeader><CardTitle className="text-base">Pagamento com cartão</CardTitle></CardHeader>
               <CardContent>
                 {paymentLoading ? (
@@ -215,17 +214,15 @@ export function CheckoutExperience({ checkoutId }: { checkoutId: string }) {
                   </div>
                 ) : null}
               </CardContent>
-            </Card>
+          </Card>
 
-          </div>
-
-          <Card className="h-fit bg-card/88">
-            <CardHeader><CardTitle className="text-base">Resumo do pedido</CardTitle></CardHeader>
-            <CardContent>
+          <Card className="h-full bg-card/88">
+            <CardHeader className="text-center"><CardTitle className="text-base">Resumo do pedido</CardTitle></CardHeader>
+            <CardContent className="text-center">
               <div className="space-y-4">
-                {checkout.items.map((item) => <div key={item.ticketTypeId} className="flex justify-between gap-4 text-sm"><div><p className="text-white">{item.quantity}× {item.ticketTypeName}</p><p className="mt-1 text-xs text-muted-foreground">{formatMoney(item.unitPriceCents)} cada</p></div><span>{formatMoney(item.quantity * item.unitPriceCents)}</span></div>)}
+                {checkout.items.map((item) => <div key={item.ticketTypeId} className="space-y-1 text-sm"><p className="text-white">{item.quantity}× {item.ticketTypeName}</p><p className="text-xs text-muted-foreground">{formatMoney(item.unitPriceCents)} cada</p><p className="text-white">{formatMoney(item.quantity * item.unitPriceCents)}</p></div>)}
               </div>
-              <div className="mt-6 flex items-end justify-between border-t border-white/8 pt-5"><span className="text-sm text-muted-foreground">Total</span><strong className="text-2xl tracking-[-0.04em] text-primary">{formatMoney(checkout.totalCents)}</strong></div>
+              <div className="mt-6 flex flex-col items-center border-t border-white/8 pt-5"><span className="text-sm text-muted-foreground">Total</span><strong className="text-2xl tracking-[-0.04em] text-primary">{formatMoney(checkout.totalCents)}</strong></div>
               <Button variant="ghost" className="mt-5 w-full text-muted-foreground" onClick={cancel} disabled={busy || terminal}>Cancelar e liberar ingressos</Button>
             </CardContent>
           </Card>

@@ -29,7 +29,7 @@ export function TicketSelector({ event, busy, onContinue }: { event: PublicEvent
   }
 
   return (
-    <Card className="smooth-shadow-ring-lg smooth-ring-white/10 shadow-black/40 sticky top-24 bg-card/88">
+    <Card className="smooth-shadow-ring-lg smooth-ring-white/10 bg-card/88 shadow-black/40">
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
           <CardTitle className="text-lg">Escolha seus ingressos</CardTitle>
@@ -37,7 +37,7 @@ export function TicketSelector({ event, busy, onContinue }: { event: PublicEvent
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,26rem),1fr))]">
           {activeTickets.map((ticket) => {
             const quantity = selection[ticket.id] ?? 0;
             const soldOut = ticket.available === 0;
