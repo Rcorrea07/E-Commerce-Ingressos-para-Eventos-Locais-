@@ -1,89 +1,85 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Ticket } from '@/mocks/tickets';
+import { useMemo, useState } from "react";
+import { Minus, Plus, ShieldCheck, Ticket as TicketIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { PublicEvent } from "@/lib/api/types";
+import { formatMoney } from "@/lib/format";
 
-interface TicketSelectorProps {
-  tickets: Ticket[];
-  eventName: string;
-}
+export type TicketSelection = Record<string, number>;
 
-export function TicketSelector({ tickets, eventName }: TicketSelectorProps) {
-  const [quantities, setQuantities] = useState<Record<string, number>>(
-    tickets.reduce((acc, ticket) => ({ ...acc, [ticket.id]: 0 }), {})
-  );
+export function TicketSelector({ event, busy, onContinue }: { event: PublicEvent; busy: boolean; onContinue: (selection: TicketSelection) => void }) {
+  const [selection, setSelection] = useState<TicketSelection>({});
 
-  const updateQuantity = (ticketId: string, delta: number) => {
-    setQuantities((prev) => {
-      const current = prev[ticketId] || 0;
-      const newQuantity = Math.max(0, current + delta);
-      const ticket = tickets.find((t) => t.id === ticketId);
-      if (ticket && newQuantity > ticket.available) {
-        return prev;
-      }
-      return { ...prev, [ticketId]: newQuantity };
+  const activeTickets = event.ticketTypes.filter((ticket) => ticket.active);
+  const totals = useMemo(() => activeTickets.reduce((result, ticket) => {
+    const quantity = selection[ticket.id] ?? 0;
+    return { quantity: result.quantity + quantity, cents: result.cents + quantity * ticket.priceCents };
+  }, { quantity: 0, cents: 0 }), [activeTickets, selection]);
+
+  function update(ticketId: string, delta: number) {
+    const ticket = activeTickets.find((candidate) => candidate.id === ticketId);
+    if (!ticket) return;
+    setSelection((current) => {
+      const value = Math.max(0, Math.min((current[ticketId] ?? 0) + delta, ticket.available, ticket.maxPerOrder));
+      return { ...current, [ticketId]: value };
     });
-  };
-
-  const total = tickets.reduce((sum, ticket) => {
-    const qty = quantities[ticket.id] || 0;
-    return sum + ticket.price * qty;
-  }, 0);
-
-  const hasItems = total > 0;
+  }
 
   return (
-    <div className="space-y-4">
-      {tickets.map((ticket) => {
-        const qty = quantities[ticket.id] || 0;
-        const isAvailable = ticket.available > 0;
-
-        return (
-          <div key={ticket.id} className="border-b border-gray-700 pb-4 last:border-0">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-semibold text-white">{ticket.type}</h3>
-                <p className="text-sm text-gray-400">
-                  R$ {ticket.price.toFixed(2)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {isAvailable ? `${ticket.available} disponíveis` : 'Esgotado'}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => updateQuantity(ticket.id, -1)}
-                  disabled={qty === 0 || !isAvailable}
-                  className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold flex items-center justify-center"
-                >
-                  -
-                </button>
-                <span className="text-white w-8 text-center font-semibold">{qty}</span>
-                <button
-                  onClick={() => updateQuantity(ticket.id, 1)}
-                  disabled={!isAvailable || qty >= ticket.available}
-                  className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold flex items-center justify-center"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      <div className="pt-4 border-t border-gray-700">
-        <div className="flex justify-between text-lg font-bold">
-          <span>Total</span>
-          <span className="text-purple-400">R$ {total.toFixed(2)}</span>
+    <Card className="surface-glow sticky top-24 border-white/10 bg-card/88">
+      <CardHeader>
+        <div className="flex items-center justify-between gap-4">
+          <CardTitle className="text-lg">Escolha seus ingressos</CardTitle>
+          <TicketIcon className="size-5 text-primary" />
         </div>
-        <button
-          disabled={!hasItems}
-          className="w-full mt-4 py-3 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-full transition"
-        >
-          Continuar para o checkout →
-        </button>
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {activeTickets.map((ticket) => {
+            const quantity = selection[ticket.id] ?? 0;
+            const soldOut = ticket.available === 0;
+            return (
+              <div key={ticket.id} className="rounded-xl border border-white/8 bg-black/12 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-medium text-white">{ticket.name}</h3>
+                      {soldOut && <Badge variant="destructive">Esgotado</Badge>}
+                    </div>
+                    {ticket.description && <p className="mt-1 text-xs leading-5 text-muted-foreground">{ticket.description}</p>}
+                    <p className="mt-2 font-semibold text-primary">{formatMoney(ticket.priceCents)}</p>
+                    {!soldOut && <p className="mt-1 text-[11px] text-muted-foreground">Até {ticket.maxPerOrder} por pedido · {ticket.available} disponíveis</p>}
+                  </div>
+                  {!soldOut && (
+                    <div className="flex shrink-0 items-center rounded-lg border border-white/10 bg-background/70 p-1">
+                      <Button variant="ghost" size="icon-sm" onClick={() => update(ticket.id, -1)} disabled={quantity === 0} aria-label={`Diminuir ${ticket.name}`}><Minus /></Button>
+                      <span className="w-8 text-center text-sm font-semibold" aria-live="polite">{quantity}</span>
+                      <Button variant="ghost" size="icon-sm" onClick={() => update(ticket.id, 1)} disabled={quantity >= ticket.available || quantity >= ticket.maxPerOrder} aria-label={`Aumentar ${ticket.name}`}><Plus /></Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 border-t border-white/8 pt-5">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">{totals.quantity} {totals.quantity === 1 ? "ingresso" : "ingressos"}</p>
+              <p className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-white">{formatMoney(totals.cents)}</p>
+            </div>
+            <Badge variant="outline" className="border-cyan-300/20 text-cyan-300"><ShieldCheck /> Reserva segura</Badge>
+          </div>
+          <Button className="mt-5 h-12 w-full" disabled={totals.quantity === 0 || busy || event.soldOut} onClick={() => onContinue(selection)}>
+            {busy ? "Reservando ingressos..." : "Reservar e continuar"}
+          </Button>
+          <p className="mt-3 text-center text-[11px] leading-4 text-muted-foreground">A reserva começa no próximo passo e dura até 15 minutos.</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

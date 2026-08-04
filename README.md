@@ -33,6 +33,8 @@ As migrations, a criação do bucket e o seed são serviços one-shot e idempote
 - `portaria@ingressos.local` / `Demo123!Local`;
 - `cliente@ingressos.local` / `Demo123!Local`.
 
+Com `SEED_DEMO_DATA=true`, o seed também publica sete eventos fictícios em seis categorias, com capas fotográficas locais, tipos de ingresso, estoque e equipe de portaria. As imagens ficam em `backend/prisma/seed-assets/events` e são enviadas ao MinIO durante a inicialização.
+
 Essas credenciais e os segredos do Compose são exclusivamente locais. Para outro ambiente, copie [`backend/.env.example`](backend/.env.example) e substitua todos os segredos.
 
 ## Desenvolvimento

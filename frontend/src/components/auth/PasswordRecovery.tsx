@@ -1,0 +1,57 @@
+"use client";
+
+import Link from "next/link";
+import { FormEvent, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle2, KeyRound, LoaderCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { authClient } from "@/lib/auth-client";
+
+export function PasswordRecovery({ mode }: { mode: "request" | "reset" }) {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token") ?? "";
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string>();
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(undefined);
+    const result = mode === "request"
+      ? await authClient.requestPasswordReset({ email, redirectTo: `${window.location.origin}/redefinir-senha` })
+      : await authClient.resetPassword({ newPassword: password, token });
+    if (result.error) setError(result.error.message ?? "Não foi possível concluir a solicitação.");
+    else setDone(true);
+    setBusy(false);
+  }
+
+  return (
+    <main className="content-grid grid min-h-[70vh] place-items-center py-12">
+      <Card className="surface-glow w-full max-w-md border-white/10 bg-card/88">
+        <CardHeader>
+          <span className="mb-3 grid size-11 place-items-center rounded-xl bg-primary/10 text-primary"><KeyRound /></span>
+          <CardTitle>{mode === "request" ? "Recupere sua senha" : "Crie uma nova senha"}</CardTitle>
+          <CardDescription>{mode === "request" ? "Enviaremos um link seguro para o seu e-mail." : "Use ao menos 8 caracteres para proteger sua conta."}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {done ? (
+            <div className="text-center"><CheckCircle2 className="mx-auto size-10 text-cyan-300" /><p className="mt-4 text-sm text-muted-foreground">{mode === "request" ? "Se o e-mail estiver cadastrado, o link chegará em instantes." : "Senha atualizada com sucesso."}</p><Button asChild className="mt-6 w-full"><Link href="/entrar">Voltar ao login</Link></Button></div>
+          ) : (
+            <form onSubmit={submit} className="space-y-4">
+              {mode === "request" ? <div className="space-y-2"><Label htmlFor="email">E-mail</Label><Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div> : <div className="space-y-2"><Label htmlFor="new-password">Nova senha</Label><Input id="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required /></div>}
+              {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+              <Button type="submit" className="w-full" disabled={busy || (mode === "reset" && !token)}>{busy && <LoaderCircle className="animate-spin" />}{mode === "request" ? "Enviar link" : "Atualizar senha"}</Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    </main>
+  );
+}

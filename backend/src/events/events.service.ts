@@ -104,7 +104,13 @@ export class EventsService {
   }
 
   async organizerList(user: SessionUser) {
-    return this.prisma.event.findMany({ where: hasRole(user, 'admin') ? {} : { organizerId: user.id }, include: { category: true, images: true, ticketTypes: true }, orderBy: { createdAt: 'desc' } });
+    const events = await this.prisma.event.findMany({ where: hasRole(user, 'admin') ? {} : { organizerId: user.id }, include: { category: true, images: true, ticketTypes: true }, orderBy: { createdAt: 'desc' } });
+    return events.map((event) => ({
+      ...event,
+      images: event.images
+        .toSorted((a, b) => a.position - b.position)
+        .map(({ objectKey, ...image }) => ({ ...image, url: this.storage.url(objectKey) }))
+    }));
   }
 
   create(user: SessionUser, input: CreateEventDto) {

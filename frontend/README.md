@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pulso — front-end
 
-## Getting Started
+Interface da plataforma de eventos locais. A identidade Pulso usa tema escuro fixo, violeta e ciano como acentos e adapta a expressão visual ao contexto: descoberta mais imersiva no público e operação mais sóbria nos painéis.
 
-First, run the development server:
+## Stack
+
+- Next.js 16, React 19 e TypeScript;
+- Tailwind CSS 4 e componentes shadcn/ui;
+- `openapi-fetch` para `/api/v1/*`;
+- cliente Better Auth para `/api/auth/*`;
+- ZXing para leitura de QR e `qrcode` para a carteira digital.
+
+## Jornadas disponíveis
+
+- descoberta, filtros e detalhes de eventos;
+- seleção local de ingressos, checkout temporário e confirmação simulada;
+- autenticação, verificação de e-mail, recuperação de senha e perfil;
+- pedidos, cancelamento elegível, carteira e QR individual;
+- ativação e painel do produtor, eventos, ingressos, mídia e portaria;
+- leitura manual ou por câmera na portaria;
+- analytics, moderação, auditoria e categorias no admin.
+
+A seleção de ingressos não é um carrinho: ela existe apenas na página do evento e a reserva começa em `POST /api/v1/checkouts`.
+
+## Execução
+
+Na raiz do repositório, o ambiente completo é iniciado com:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Para executar somente o front em desenvolvimento:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+O front usa `NEXT_PUBLIC_API_URL`, com fallback para `http://localhost:3001`.
 
-## Learn More
+## Verificação
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run lint
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Após mudanças no contrato da API:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run api:generate
+```
