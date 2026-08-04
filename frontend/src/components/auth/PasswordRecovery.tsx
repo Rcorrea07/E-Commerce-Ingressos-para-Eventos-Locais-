@@ -34,7 +34,7 @@ export function PasswordRecovery({ mode }: { mode: "request" | "reset" }) {
 
   return (
     <main className="content-grid grid min-h-[70vh] place-items-center py-12">
-      <Card className="surface-glow w-full max-w-md border-white/10 bg-card/88">
+      <Card className="smooth-shadow-ring-lg smooth-ring-white/10 shadow-black/40 w-full max-w-md bg-card/88">
         <CardHeader>
           <span className="mb-3 grid size-11 place-items-center rounded-xl bg-primary/10 text-primary"><KeyRound /></span>
           <CardTitle>{mode === "request" ? "Recupere sua senha" : "Crie uma nova senha"}</CardTitle>

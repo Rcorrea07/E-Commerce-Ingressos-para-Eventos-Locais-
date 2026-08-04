@@ -29,7 +29,7 @@ export function TicketSelector({ event, busy, onContinue }: { event: PublicEvent
   }
 
   return (
-    <Card className="surface-glow sticky top-24 border-white/10 bg-card/88">
+    <Card className="smooth-shadow-ring-lg smooth-ring-white/10 shadow-black/40 sticky top-24 bg-card/88">
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
           <CardTitle className="text-lg">Escolha seus ingressos</CardTitle>

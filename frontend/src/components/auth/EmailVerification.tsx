@@ -22,7 +22,7 @@ export function EmailVerification({ verified = false }: { verified?: boolean }) 
   }
   return (
     <main className="content-grid grid min-h-[70vh] place-items-center py-12">
-      <Card className="surface-glow w-full max-w-lg border-white/10 bg-card/88">
+      <Card className="smooth-shadow-ring-lg smooth-ring-white/10 shadow-black/40 w-full max-w-lg bg-card/88">
         <CardContent className="flex flex-col items-center px-8 py-12 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-300"><MailCheck /></span>
           <h1 className="mt-5 text-2xl font-semibold tracking-[-0.04em] text-white">{verified ? "E-mail confirmado" : "Confirme seu e-mail"}</h1>
