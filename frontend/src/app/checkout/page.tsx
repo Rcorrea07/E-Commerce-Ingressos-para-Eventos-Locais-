@@ -43,7 +43,7 @@ function CheckoutContent() {
   if (!event) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold">Evento não encontrado!</h1>
+        <h1 className="text-2xl font-bold">Error 404: Evento não encontrado!</h1>
         <Link href="/" className="text-purple-400 hover:underline">
           ← Voltar para os eventos
         </Link>
@@ -71,7 +71,7 @@ function CheckoutContent() {
   return (
     <div className="min-h-screen bg-gray-950 text-white p-8">
       <div className="max-w-2xl mx-auto bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
-        <Link href="/" className="text-sm text-purple-400 hover:underline mb-4 inline-block">
+        <Link href={`/detalhes?id=${eventId}`} className="text-sm text-purple-400 hover:underline mb-4 inline-block">
           ← Voltar
         </Link>
 
@@ -111,7 +111,7 @@ function CheckoutContent() {
                 {formattedTotalPrice}
               </p>
             </div>
-
+          {!deadline && (
             <div className="flex items-center justify-between sm:justify-center gap-3 bg-gray-900 px-3 py-2 rounded-lg border border-gray-700">
               <button
                 onClick={handleDecrease}
@@ -133,6 +133,7 @@ function CheckoutContent() {
                 +
               </button>
             </div>
+          )}
           </div>
         </div>
 
