@@ -66,7 +66,7 @@ export function AdminEventReview({ eventId }: { eventId: string }) {
       <Button asChild variant="ghost" className="mb-5 -ml-2 text-muted-foreground"><Link href="/admin/eventos"><ArrowLeft /> Voltar aos eventos</Link></Button>
       <PageHeader eyebrow="Revisão editorial" title={event.title} description={`${event.organizer.name} · ${event.organizer.email}`} actions={canReview ? <ReviewActions busy={busy} reason={reason} setReason={setReason} rejectOpen={rejectOpen} setRejectOpen={setRejectOpen} approve={approve} reject={reject} /> : <Badge variant="secondary" className="h-7 px-3">{event.status}</Badge>} />
 
-      {event.rejectionReason && <Alert variant="destructive" className="mt-6"><X /><AlertTitle>Motivo da rejeição</AlertTitle><AlertDescription>{event.rejectionReason}</AlertDescription></Alert>}
+      {event.rejectionReason && <Alert variant="destructive" role="status" className="mt-6"><X /><AlertTitle>Motivo da rejeição</AlertTitle><AlertDescription>{event.rejectionReason}</AlertDescription></Alert>}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
         <div className="space-y-6">

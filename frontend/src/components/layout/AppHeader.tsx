@@ -51,7 +51,7 @@ export function AppHeader() {
             key={link.href}
             href={link.href}
             className={cn(
-              "rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/5 hover:text-white",
+              "flex min-h-10 items-center rounded-lg px-3 py-2 text-sm text-muted-foreground transition-[background-color,color] motion-reduce:transition-none hover:bg-white/5 hover:text-white",
               active && "bg-white/6 text-white",
             )}
           >

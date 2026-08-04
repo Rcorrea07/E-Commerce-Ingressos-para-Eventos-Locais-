@@ -46,7 +46,7 @@ export function PasswordRecovery({ mode }: { mode: "request" | "reset" }) {
           ) : (
             <form onSubmit={submit} className="space-y-4">
               {mode === "request" ? <div className="space-y-2"><Label htmlFor="email">E-mail</Label><Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div> : <div className="space-y-2"><Label htmlFor="new-password">Nova senha</Label><Input id="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required /></div>}
-              {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+              {error && <Alert variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
               <Button type="submit" className="w-full" disabled={busy || (mode === "reset" && !token)}>{busy && <LoaderCircle className="animate-spin" />}{mode === "request" ? "Enviar link" : "Atualizar senha"}</Button>
             </form>
           )}

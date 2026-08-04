@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Check, ChevronLeft, Clock3, CreditCard, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Banknote, Check, ChevronLeft, Clock3, CreditCard, LoaderCircle, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { StatePanel } from "@/components/states/StatePanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -134,7 +134,7 @@ export function CheckoutExperience({ checkoutId }: { checkoutId: string }) {
           <Progress value={progress} className="mt-3 h-1.5" />
         </div>
 
-        {(error || terminal) && <Alert variant="destructive" className="mb-6"><AlertTitle>Reserva encerrada</AlertTitle><AlertDescription>{error ?? `Status atual: ${checkout.status}`}</AlertDescription></Alert>}
+        {(error || terminal) && <Alert variant="destructive" role="alert" className="mb-6"><AlertTitle>Reserva encerrada</AlertTitle><AlertDescription>{error ?? `Status atual: ${checkout.status}`}</AlertDescription></Alert>}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <div className="space-y-6">
@@ -152,7 +152,6 @@ export function CheckoutExperience({ checkoutId }: { checkoutId: string }) {
               </CardContent>
             </Card>
 
-            <Alert className="border-cyan-300/15 bg-cyan-300/5"><ShieldCheck className="text-cyan-300" /><AlertTitle>Pagamento do MVP é simulado</AlertTitle><AlertDescription>Nenhuma cobrança real será feita. Ao confirmar, os ingressos serão emitidos imediatamente.</AlertDescription></Alert>
           </div>
 
           <Card className="h-fit bg-card/88">

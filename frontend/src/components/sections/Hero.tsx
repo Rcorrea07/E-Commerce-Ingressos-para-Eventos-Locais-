@@ -27,14 +27,14 @@ export function Hero() {
           <input
             type="text"
             placeholder="Nome do evento"
-            className="flex-1 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm text-white placeholder-white/80 border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition text-sm"
+            className="flex-1 rounded-full border border-white/30 bg-white/20 px-4 py-2 text-sm text-white placeholder-white/80 outline-none backdrop-blur-sm transition-[background-color,border-color,color,box-shadow] focus-visible:border-purple-300 focus-visible:ring-2 focus-visible:ring-purple-400 motion-reduce:transition-none"
           />
           <input
             type="text"
             placeholder="Cidade"
-            className="flex-1 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm text-white placeholder-white/80 border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition text-sm"
+            className="flex-1 rounded-full border border-white/30 bg-white/20 px-4 py-2 text-sm text-white placeholder-white/80 outline-none backdrop-blur-sm transition-[background-color,border-color,color,box-shadow] focus-visible:border-purple-300 focus-visible:ring-2 focus-visible:ring-purple-400 motion-reduce:transition-none"
           />
-          <button className="w-full sm:w-auto px-5 sm:px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-full transition-all shadow-lg shadow-purple-500/30 hover:scale-105 text-sm">
+          <button className="w-full rounded-full bg-purple-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition-[background-color,box-shadow,transform] hover:bg-purple-600 hover:scale-[1.02] active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-300 motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100 sm:w-auto sm:px-6">
             Explorar eventos →
           </button>
         </div>

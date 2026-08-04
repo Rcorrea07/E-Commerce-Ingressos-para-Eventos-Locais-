@@ -167,7 +167,6 @@ export function ProfileExperience() {
                 <div className="sm:col-span-2">
                   <Field label="CEP" id="postalCode" value={formatCep(form.postalCode)} onChange={(value) => update("postalCode", normalizeCep(value))} autoComplete="postal-code" inputMode="numeric" maxLength={9} placeholder="00000-000" aria-invalid={cepStatus === "notFound"} />
                   {cepStatus === "loading" && <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground"><LoaderCircle className="size-3 animate-spin" /> Consultando endereço...</p>}
-                  {cepStatus === "found" && <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-300"><CheckCircle2 className="size-3" /> Endereço preenchido automaticamente.</p>}
                   {cepError && <p className={`mt-1 flex items-center gap-1 text-[11px] ${cepStatus === "unavailable" ? "text-amber-300" : "text-destructive"}`} role="alert"><CircleAlert className="size-3" /> {cepError}</p>}
                 </div>
                 <div className="sm:col-span-4"><Field label="Rua" id="street" value={form.street} onChange={(value) => update("street", value)} autoComplete="address-line1" /></div>
@@ -177,7 +176,7 @@ export function ProfileExperience() {
                 <div className="sm:col-span-3"><Field label="Cidade" id="city" value={form.city} onChange={(value) => update("city", value)} autoComplete="address-level2" /></div>
                 <div className="sm:col-span-1"><Field label="UF" id="state" value={form.state} onChange={(value) => update("state", value.toUpperCase().slice(0, 2))} autoComplete="address-level1" /></div>
               </div></div>
-              {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+              {error && <Alert variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
               <div className="flex justify-end"><Button type="submit" disabled={busy || cepStatus === "loading"}>{busy && <LoaderCircle className="animate-spin" />}{busy ? "Salvando..." : "Salvar perfil"}</Button></div>
             </form>
           </CardContent>

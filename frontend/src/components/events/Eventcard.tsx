@@ -19,7 +19,7 @@ export function EventCard({ event, priority = false }: { event: EventSummary; pr
             alt={`Capa do evento ${event.title}`}
             fill
             priority={priority}
-            className="object-cover transition duration-500 group-hover:scale-[1.04]"
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:scale-100 motion-reduce:transition-none"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/5 to-transparent" />
@@ -38,7 +38,7 @@ export function EventCard({ event, priority = false }: { event: EventSummary; pr
                 <span className="truncate">{event.venueName} · {event.city}, {event.state}</span>
               </p>
             </div>
-            <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+            <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-colors motion-reduce:transition-none group-hover:text-primary" />
           </div>
           <div className="mt-5 flex items-end justify-between border-t border-white/8 pt-4">
             <span className="text-xs text-muted-foreground">{event.soldOut ? "Vendas encerradas" : "Ingressos a partir de"}</span>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { BrandMark } from "@/components/brand/Brand";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -74,14 +74,13 @@ export function AuthExperience({ mode }: { mode: "sign-in" | "sign-up" }) {
                 <Button type="button" variant="ghost" size="icon-sm" className="absolute right-1.5 top-1/2 -translate-y-1/2" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeOff /> : <Eye />}</Button>
               </div>
             </div>
-            {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+            {error && <Alert variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
             <Button type="submit" className="h-11 w-full" disabled={busy}>{busy ? <><LoaderCircle className="animate-spin" /> Aguarde...</> : <>{signingUp ? "Criar minha conta" : "Entrar na Pulso"}<ArrowRight /></>}</Button>
           </form>
           <div className="mt-5 flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <span>{signingUp ? "Já tem uma conta?" : "Ainda não está na Pulso?"}</span>
             <Link href={signingUp ? "/entrar" : "/criar-conta"} className="font-medium text-primary hover:underline">{signingUp ? "Entrar" : "Criar conta"}</Link>
           </div>
-          <p className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground"><ShieldCheck className="size-3.5 text-cyan-300" /> Sessão protegida por cookie HttpOnly</p>
         </CardContent>
       </Card>
     </AuthShell>
