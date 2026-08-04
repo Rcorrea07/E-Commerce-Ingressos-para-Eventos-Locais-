@@ -1,62 +1,51 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Event } from "@/mocks/events";
+import { ArrowUpRight, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import type { EventSummary } from "@/lib/api/types";
+import { formatMoney, formatShortDate } from "@/lib/format";
 
-interface EventCardProps {
-  event: Event;
-}
-
-export function EventCard({ event }: EventCardProps) {
-  const formattedPrice = event.price === 0 ? "Gratuito" : `R$ ${event.price.toFixed(2)}`;
-
-  const eventDate = new Date(event.date);
-  const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  const formattedDate = `${weekdays[eventDate.getDay()]}, ${eventDate.getDate()} ${months[eventDate.getMonth()]}`;
+export function EventCard({ event, priority = false }: { event: EventSummary; priority?: boolean }) {
+  const cover = event.images.find((image) => image.kind === "COVER")?.url;
+  const lowestPrice = event.ticketTypes.filter((ticket) => ticket.active).sort((a, b) => a.priceCents - b.priceCents)[0];
 
   return (
-    <div className="bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-700 flex flex-col h-full overflow-hidden">
-      <div className="relative h-48 w-full bg-gray-700 shrink-0">
-        {event.image ? (
+    <Card className="group overflow-hidden border-white/8 bg-card/72 p-0 transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_24px_80px_rgba(23,14,35,.58)]">
+      <Link href={`/eventos/${event.slug}`} className="block">
+        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
           <Image
-            src={event.image}
-            alt={event.name}
+            src={cover ?? "/images/Event_1.png"}
+            alt={`Capa do evento ${event.title}`}
             fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            priority={priority}
+            className="object-cover transition duration-500 group-hover:scale-[1.04]"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
-        ) : (
-          <div className="w-full h-full bg-linear-to-br from-purple-700 to-purple-900 flex items-center justify-center text-4xl">
-            🎉
+          <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/5 to-transparent" />
+          <Badge className="absolute left-3 top-3 border-white/15 bg-black/55 text-white backdrop-blur-md">{event.category.name}</Badge>
+          {event.soldOut && <Badge variant="destructive" className="absolute right-3 top-3">Esgotado</Badge>}
+          <div className="absolute bottom-3 left-3 rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs font-medium text-white backdrop-blur-md">
+            {formatShortDate(event.startsAt)}
           </div>
-        )}
-        <span className="absolute top-3 left-3 bg-purple-600/90 text-white text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-sm">
-          {event.category}
-        </span>
-        <span className="absolute bottom-3 left-3 bg-black/70 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
-          {formattedDate} • {event.time}
-        </span>
-      </div>
-
-      <div className="p-4 flex flex-col grow">
-        <h3 className="font-bold text-lg text-white line-clamp-1">{event.name}</h3>
-        <p className="text-sm text-gray-400 mt-1 flex items-center gap-1">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          {event.location}
-        </p>
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-lg font-bold text-purple-400">{formattedPrice}</span>
-          <Link
-            href={`/event/${event.id}`}
-            className="text-sm font-medium text-purple-400 hover:text-purple-300 hover:underline transition"
-          >
-            Ver evento →
-          </Link>
         </div>
-      </div>
-    </div>
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="line-clamp-2 text-lg font-semibold tracking-[-0.025em] text-white">{event.title}</h3>
+              <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <MapPin className="size-3.5 shrink-0" />
+                <span className="truncate">{event.venueName} · {event.city}, {event.state}</span>
+              </p>
+            </div>
+            <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+          </div>
+          <div className="mt-5 flex items-end justify-between border-t border-white/8 pt-4">
+            <span className="text-xs text-muted-foreground">{event.soldOut ? "Vendas encerradas" : "Ingressos a partir de"}</span>
+            {!event.soldOut && <strong className="text-sm font-semibold text-primary">{lowestPrice ? formatMoney(lowestPrice.priceCents) : "Em breve"}</strong>}
+          </div>
+        </CardContent>
+      </Link>
+    </Card>
   );
 }

@@ -153,6 +153,10 @@ export class AdminService {
     return this.paginated(data, total, query.page, query.pageSize);
   }
 
+  categories() {
+    return this.prisma.eventCategory.findMany({ orderBy: { name: 'asc' } });
+  }
+
   private paginated<T>(data: T[], total: number, page: number, pageSize: number) {
     return { data, pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } };
   }

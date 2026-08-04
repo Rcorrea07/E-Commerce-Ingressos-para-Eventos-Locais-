@@ -4,6 +4,7 @@ import { ApiProblems, ApiProtected } from '../common/openapi.decorators.js';
 import { CurrentUser } from '../common/session-user.decorator.js';
 import { Roles } from '../common/roles.decorator.js';
 import type { SessionUser } from '../common/request-context.js';
+import { CategoryResponseDto } from '../events/events.response.js';
 import { AdminEventsQueryDto, AdminOrdersQueryDto, AdminTicketsQueryDto, AdminUsersQueryDto, RejectEventDto } from './admin.dto.js';
 import { AdminEventDetailsResponseDto, AdminEventsResponseDto, AdminOrdersResponseDto, AdminTicketsResponseDto, AdminUsersResponseDto } from './admin.response.js';
 import { AdminService } from './admin.service.js';
@@ -52,4 +53,9 @@ export class AdminController {
   @ApiOkResponse({ type: AdminUsersResponseDto })
   @Get('users')
   users(@Query() query: AdminUsersQueryDto) { return this.service.users(query); }
+
+  @ApiOperation({ summary: 'Listar todas as categorias' })
+  @ApiOkResponse({ type: CategoryResponseDto, isArray: true })
+  @Get('categories')
+  categories() { return this.service.categories(); }
 }
