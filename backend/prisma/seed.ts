@@ -189,23 +189,23 @@ const fixtures: EventFixture[] = [
   },
   {
     categorySlug: 'musica',
-    title: 'Festival Local Demo',
-    slug: 'festival-local-demo',
-    description: 'Evento de demonstração com música, ingressos individuais e validação por QR Code.',
-    venueName: 'Centro Cultural Local',
-    postalCode: '01001000',
-    street: 'Praça da Sé',
-    number: '100',
-    district: 'Sé',
+    title: 'Noite Indie no Galpão',
+    slug: 'noite-indie-no-galpao',
+    description: 'Uma noite de música independente com quatro bandas, repertório autoral e um palco intimista no coração da Barra Funda.',
+    venueName: 'Galpão Cultural Barra Funda',
+    postalCode: '01153000',
+    street: 'Rua Barra Funda',
+    number: '651',
+    district: 'Barra Funda',
     city: 'São Paulo',
     state: 'SP',
     startsInDays: 30,
-    startHour: 20,
-    durationHours: 4,
-    coverFile: 'festival-local-demo.webp',
+    startHour: 19,
+    durationHours: 5,
+    coverFile: 'noite-indie-no-galpao.webp',
     tickets: [
-      { name: 'Inteira', description: 'Ingresso individual para o evento de demonstração.', priceCents: 8000, capacity: 100, maxPerOrder: 10 },
-      { name: 'Meia-entrada', description: 'Ingresso sujeito à comprovação do benefício.', priceCents: 4000, capacity: 50, maxPerOrder: 2 }
+      { name: 'Pista', description: 'Acesso à área de público em frente ao palco.', priceCents: 6500, capacity: 180, maxPerOrder: 6 },
+      { name: 'Meia-entrada', description: 'Ingresso sujeito à comprovação do benefício.', priceCents: 3250, capacity: 90, maxPerOrder: 2 }
     ]
   },
   {
@@ -390,13 +390,18 @@ try {
       });
     }
 
-    const demoEvent = seededEvents.get('festival-local-demo');
-    const full = demoEvent?.tickets.get('Inteira');
-    if (!demoEvent || !full) throw new Error('Evento de demonstração incompleto.');
-    const existingOrder = await prisma.order.findFirst({ where: { userId: customer.id, eventId: demoEvent.id } });
+    const legacyDemo = await prisma.event.findUnique({ where: { slug: 'festival-local-demo' }, select: { id: true, status: true } });
+    if (legacyDemo && legacyDemo.status !== EventStatus.CANCELLED) {
+      await prisma.event.update({ where: { id: legacyDemo.id }, data: { status: EventStatus.CANCELLED, cancelledAt: new Date() } });
+    }
+
+    const featuredEvent = seededEvents.get('noite-indie-no-galpao');
+    const full = featuredEvent?.tickets.get('Pista');
+    if (!featuredEvent || !full) throw new Error('Evento principal do seed incompleto.');
+    const existingOrder = await prisma.order.findFirst({ where: { userId: customer.id, eventId: featuredEvent.id } });
     if (!existingOrder) {
       const user = { id: customer.id, name: customer.name, email: customer.email, emailVerified: true, role: customer.role };
-      const checkout = await checkouts.create(user, randomUUID(), { eventId: demoEvent.id, items: [{ ticketTypeId: full.id, quantity: 1 }] });
+      const checkout = await checkouts.create(user, randomUUID(), { eventId: featuredEvent.id, items: [{ ticketTypeId: full.id, quantity: 1 }] });
       await checkouts.confirm(user, checkout.id, randomUUID());
     }
     console.info('Seed completo:', {
