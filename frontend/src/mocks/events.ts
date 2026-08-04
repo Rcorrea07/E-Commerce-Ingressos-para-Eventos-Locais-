@@ -9,6 +9,11 @@ export interface Event {
   image?: string;
   description?: string;
   organization?: string;
+  organizer?: {
+    name: string;
+    email?: string;
+    phone?: string;
+  };
 }
 
 export const events: Event[] = [
@@ -23,6 +28,11 @@ export const events: Event[] = [
     image: '/images/Event_1.png',
     description: 'Prepare-se para uma experiência imersiva repleta de luzes neon, DJs renomados e muita energia. O festival reúne o melhor da música eletrônica em uma estrutura épica e futurista. Venha viver uma noite inesquecível com efeitos visuais surpreendentes.',
     organization: 'Neon Group',
+    organizer: {
+      name: 'Neon Produções',
+      email: 'contato@neonproducoes.com',
+      phone: '(11) 99999-9999',
+    },
   },
   {
     id: '2',
@@ -35,6 +45,10 @@ export const events: Event[] = [
     image: '/images/Event_2.png',
     description: 'Celebre o pôr do sol à beira-mar com o melhor do house music, drinks exclusivos e um clima paradisíaco. Uma festa pé na areia pensada para quem quer curtir a energia do litoral. Aproveite a vibe única e venha conectar-se com boas vibrações.',
     organization: 'Samba da praia',
+    organizer: {
+      name: 'Sunset Produções',
+      email: 'contato@sunsetproducoes.com',
+    },
   },
   {
     id: '3',

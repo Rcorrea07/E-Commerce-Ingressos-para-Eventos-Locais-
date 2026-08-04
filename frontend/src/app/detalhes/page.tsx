@@ -4,9 +4,9 @@ import { useSearchParams } from "next/navigation";
 import { events } from "@/mocks/events";
 import Link from "next/link";
 import Image from "next/image";
-import React from "react";
+import { Suspense } from "react";
 
-export default function Detalhes() {
+function DetalhesContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get("id") || "1";
 
@@ -114,5 +114,13 @@ export default function Detalhes() {
 
       </div>
     </div>
+  );
+}
+
+export default function Detalhes() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+      <DetalhesContent />
+    </Suspense>
   );
 }

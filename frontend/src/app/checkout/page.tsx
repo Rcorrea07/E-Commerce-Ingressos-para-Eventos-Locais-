@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { events } from "@/mocks/events";
 import Link from "next/link";
 import React from "react";
 
-export default function Checkout() {
+function CheckoutContent() {
   const searchParams = useSearchParams();
   const [quantity, setQuantity] = useState(1);
   const [deadline, setDeadline] = useState<string | null>(null);
@@ -16,13 +16,13 @@ export default function Checkout() {
   const eventId = searchParams.get("id") || "1";
   const event = events.find((item) => String(item.id) === String(eventId));
 
-  const handleCancelReservation = () => {
+  const handleCancelReservation = useCallback(() => {
     setDeadline(null);
     setMinutes(15);
     setSeconds(0);
-  };
+  }, []);
 
-  const getTime = (targetDeadline: string) => {
+  const getTime = useCallback((targetDeadline: string) => {
     const time = Date.parse(targetDeadline) - Date.now();
 
     if (time <= 0) {
@@ -31,14 +31,14 @@ export default function Checkout() {
       setMinutes(Math.floor((time / 1000 / 60) % 60));
       setSeconds(Math.floor((time / 1000) % 60));
     }
-  };
+  }, [handleCancelReservation]);
 
   useEffect(() => {
     if (deadline) {
       const interval = setInterval(() => getTime(deadline), 1000);
       return () => clearInterval(interval);
     }
-  }, [deadline]);
+  }, [deadline, getTime]);
 
   if (!event) {
     return (
@@ -162,5 +162,13 @@ export default function Checkout() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Checkout() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+      <CheckoutContent />
+    </Suspense>
   );
 }
