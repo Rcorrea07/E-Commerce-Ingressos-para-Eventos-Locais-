@@ -140,7 +140,7 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      <div className="relative mx-auto h-[clamp(270px,min(36vw,55svh),580px)] max-w-[1280px]">
+      <div className="relative mx-auto h-[clamp(270px,min(36vw,55svh),580px)] max-w-[1280px] overflow-x-clip">
         {slides.length === 1 ? (
           <>
             <div aria-hidden="true" className="absolute left-[1%] top-1/2 hidden h-[72%] w-[48%] -translate-y-1/2 -rotate-2 overflow-hidden rounded-[1.7rem] opacity-45 smooth-shadow-ring-lg smooth-ring-white/10 sm:block">
