@@ -12,9 +12,9 @@ interface EventPageProps {
 
 export default function EventPage({ params }: EventPageProps) {
   const router = useRouter();
-  
+
   const { id } = React.use(params);
-  
+
   const event = events.find((e) => e.id === id);
 
   if (!event) {

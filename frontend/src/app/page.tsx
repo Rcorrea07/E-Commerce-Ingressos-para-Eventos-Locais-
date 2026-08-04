@@ -5,7 +5,7 @@ import { events } from "@/mocks/events";
 export default function Home() {
   return (
     <main>
-      <Hero />
+      <Hero/>
       <section className="bg-gray-950 py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-8 flex items-center gap-2">
