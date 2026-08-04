@@ -6,10 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, CalendarDays, Check, ShieldCheck, Ticket, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { EventStatusBadge } from "@/components/organizer/OrganizerEvents";
 import { StatePanel } from "@/components/states/StatePanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -64,7 +64,7 @@ export function AdminEventReview({ eventId }: { eventId: string }) {
   return (
     <div>
       <Button asChild variant="ghost" className="mb-5 -ml-2 text-muted-foreground"><Link href="/admin/eventos"><ArrowLeft /> Voltar aos eventos</Link></Button>
-      <PageHeader eyebrow="Revisão editorial" title={event.title} description={`${event.organizer.name} · ${event.organizer.email}`} actions={canReview ? <ReviewActions busy={busy} reason={reason} setReason={setReason} rejectOpen={rejectOpen} setRejectOpen={setRejectOpen} approve={approve} reject={reject} /> : <Badge variant="secondary" className="h-7 px-3">{event.status}</Badge>} />
+      <PageHeader eyebrow="Revisão editorial" title={event.title} description={`${event.organizer.name} · ${event.organizer.email}`} actions={canReview ? <ReviewActions busy={busy} reason={reason} setReason={setReason} rejectOpen={rejectOpen} setRejectOpen={setRejectOpen} approve={approve} reject={reject} /> : <EventStatusBadge status={event.status} />} />
 
       {event.rejectionReason && <Alert variant="destructive" role="status" className="mt-6"><X /><AlertTitle>Motivo da rejeição</AlertTitle><AlertDescription>{event.rejectionReason}</AlertDescription></Alert>}
 

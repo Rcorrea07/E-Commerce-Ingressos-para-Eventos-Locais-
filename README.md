@@ -1,12 +1,13 @@
 # Plataforma de ingressos para eventos locais
 
-Aplicação para divulgação, reserva temporária e emissão simulada de ingressos. A compra não usa carrinho: o cliente seleciona os tipos na página do evento e, ao continuar, abre um checkout de um único evento que reserva unidades por até 15 minutos.
+Aplicação para divulgação, reserva temporária e emissão de ingressos. A compra não usa carrinho: o cliente seleciona os tipos na página do evento e, ao continuar, abre um checkout de um único evento que reserva unidades por até 15 minutos. O pagamento pode usar o gateway local simulado ou a Stripe exclusivamente em modo de teste.
 
 ## Stack
 
 - Front-end: Next.js 16, React 19, TypeScript e Tailwind CSS;
 - API: Node.js 22, NestJS 11, TypeScript, Prisma 7 e Zod 4;
 - Identidade: Better Auth com sessões no MySQL;
+- Pagamento: Stripe Payment Element em modo de teste, com webhook assinado, ou gateway simulado local;
 - Infra local: MySQL 8.4, MinIO e Mailpit via Docker Compose;
 - Contratos: OpenAPI e cliente TypeScript gerado com `openapi-typescript`/`openapi-fetch`.
 
@@ -36,6 +37,25 @@ As migrations, a criação do bucket e o seed são serviços one-shot e idempote
 Com `SEED_DEMO_DATA=true`, o seed também publica sete eventos fictícios em seis categorias, com capas fotográficas locais, tipos de ingresso, estoque e equipe de portaria. As imagens ficam em `backend/prisma/seed-assets/events` e são enviadas ao MinIO durante a inicialização.
 
 Essas credenciais e os segredos do Compose são exclusivamente locais. Para outro ambiente, copie [`backend/.env.example`](backend/.env.example) e substitua todos os segredos.
+
+### Stripe em modo de teste
+
+O Compose mantém `PAYMENT_PROVIDER=simulated` por padrão. Para usar a Stripe, configure no ambiente antes de iniciar:
+
+```env
+PAYMENT_PROVIDER=stripe_test
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+O segredo `whsec_...` pode ser obtido localmente com o Stripe CLI:
+
+```bash
+stripe listen --forward-to localhost:3001/api/v1/payments/stripe/webhook
+```
+
+Depois, execute `docker compose up --build`. Somente chaves de teste são aceitas; chaves `sk_live_` e `pk_live_` fazem a API recusar a inicialização. Nunca registre esses valores no repositório.
 
 ## Desenvolvimento
 

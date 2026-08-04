@@ -21,7 +21,10 @@ describe('OpenAPI application contract', () => {
 
   it('marks every protected operation with cookie authentication', () => {
     for (const { path, method, operation } of operations) {
-      const publicOperation = path.startsWith('/health') || path.startsWith('/api/v1/events') || (path === '/api/v1/categories' && method === 'get');
+      const publicOperation = path.startsWith('/health')
+        || path.startsWith('/api/v1/events')
+        || (path === '/api/v1/categories' && method === 'get')
+        || (path === '/api/v1/payments/stripe/webhook' && method === 'post');
       expect(Boolean(operation.security), `${method.toUpperCase()} ${path}`).toBe(!publicOperation);
     }
   });

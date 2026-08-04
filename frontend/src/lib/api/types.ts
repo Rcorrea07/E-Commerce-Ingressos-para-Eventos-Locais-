@@ -9,6 +9,7 @@ export type EventSummary = EventListResponse["data"][number];
 export type PublicEvent = Schemas["PublicEventResponseDto"];
 export type Category = Schemas["CategoryResponseDto"];
 export type Checkout = Schemas["CheckoutResponseDto"];
+export type PaymentSession = Schemas["PaymentSessionResponseDto"];
 export type Order = Schemas["OrderResponseDto"];
 export type Ticket = Schemas["TicketResponseDto"];
 export type OrganizerEvent = Schemas["OrganizerEventResponseDto"];

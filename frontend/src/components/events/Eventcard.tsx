@@ -24,7 +24,7 @@ export function EventCard({ event, priority = false }: { event: EventSummary; pr
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/5 to-transparent" />
           <Badge className="absolute left-3 top-3 border-white/15 bg-black/55 text-white backdrop-blur-md">{event.category.name}</Badge>
-          {event.soldOut && <Badge variant="destructive" className="absolute right-3 top-3">Esgotado</Badge>}
+          {event.soldOut && <Badge className="absolute right-3 top-3 border-white/15 bg-black/70 text-destructive backdrop-blur-md">Esgotado</Badge>}
           <div className="absolute bottom-3 left-3 rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs font-medium text-white backdrop-blur-md">
             {formatShortDate(event.startsAt)}
           </div>

@@ -34,6 +34,14 @@ enum CheckoutStatus {
   ABANDONED
 }
 
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
 enum OrderStatus {
   CONFIRMED
   CANCELLED_BY_CUSTOMER
@@ -278,6 +286,9 @@ model Checkout {
   expiresAt       DateTime
   lastHeartbeatAt DateTime
   terminalReason  String?        @db.VarChar(100)
+  paymentProvider String?        @db.VarChar(40)
+  paymentReference String?       @unique @db.VarChar(255)
+  paymentStatus   PaymentStatus?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   confirmedAt     DateTime?
@@ -321,6 +332,7 @@ model Order {
   customerCpfLast4 String      @db.Char(4)
   customerSnapshot Json
   paymentProvider  String      @default("SIMULATED") @db.VarChar(40)
+  paymentReference String?     @unique @db.VarChar(255)
   createdAt        DateTime    @default(now())
   cancelledAt      DateTime?
   checkout         Checkout    @relation(fields: [checkoutId], references: [id], onDelete: Restrict)

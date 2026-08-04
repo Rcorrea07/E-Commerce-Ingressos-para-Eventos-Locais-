@@ -2596,6 +2596,130 @@
         ]
       }
     },
+    "/api/v1/checkouts/{id}/payment-session": {
+      "post": {
+        "operationId": "CheckoutsController_paymentSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSessionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requisição inválida",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Autenticação necessária",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Operação não autorizada",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso não encontrado",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito com o estado atual",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Recurso expirado ou encerrado",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regra de negócio não atendida",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de requisições excedido",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Iniciar ou retomar pagamento do checkout",
+        "tags": [
+          "Checkouts"
+        ]
+      }
+    },
     "/api/v1/checkouts/{id}/confirm": {
       "post": {
         "operationId": "CheckoutsController_confirm",
@@ -2717,6 +2841,57 @@
         "summary": "Confirmar checkout e emitir ingressos",
         "tags": [
           "Checkouts"
+        ]
+      }
+    },
+    "/api/v1/payments/stripe/webhook": {
+      "post": {
+        "operationId": "StripeWebhooksController_webhook",
+        "parameters": [
+          {
+            "name": "stripe-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentWebhookResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requisição inválida",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependência indisponível",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Receber eventos assinados da Stripe",
+        "tags": [
+          "Payments"
         ]
       }
     },
@@ -6746,6 +6921,30 @@
               "BRL"
             ]
           },
+          "payment": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "PROCESSING",
+                  "SUCCEEDED",
+                  "FAILED",
+                  "CANCELLED",
+                  null
+                ],
+                "nullable": true
+              }
+            },
+            "required": [
+              "provider",
+              "status"
+            ]
+          },
           "serverTime": {
             "type": "string",
             "format": "date-time",
@@ -6826,6 +7025,43 @@
         "required": [
           "id",
           "status"
+        ]
+      },
+      "PaymentSessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "FREE",
+              "SIMULATED",
+              "STRIPE_TEST"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED"
+            ]
+          },
+          "requiresAction": {
+            "type": "boolean"
+          },
+          "clientSecret": {
+            "type": "string"
+          },
+          "publishableKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "status",
+          "requiresAction"
         ]
       },
       "OrderResponseDto": {
@@ -6993,6 +7229,20 @@
           "items",
           "createdAt",
           "cancelledAt"
+        ]
+      },
+      "PaymentWebhookResponseDto": {
+        "type": "object",
+        "properties": {
+          "received": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "received"
         ]
       },
       "TicketResponseDto": {

@@ -15,7 +15,9 @@ import { api } from "@/lib/api/client";
 import { fieldErrors, problemMessage } from "@/lib/api/problem";
 import type { Profile } from "@/lib/api/types";
 import { authClient } from "@/lib/auth-client";
+import { authErrorMessage } from "@/lib/auth-errors";
 import { formatCep, lookupCep, normalizeCep } from "@/lib/cep";
+import { roleLabel } from "@/lib/labels";
 
 type ProfileForm = { name: string; phone: string; cpf: string; postalCode: string; street: string; number: string; complement: string; district: string; city: string; state: string };
 const empty: ProfileForm = { name: "", phone: "", cpf: "", postalCode: "", street: "", number: "", complement: "", district: "", city: "", state: "" };
@@ -29,12 +31,16 @@ export function ProfileExperience() {
   const [error, setError] = useState<string>();
   const [cepStatus, setCepStatus] = useState<CepStatus>("idle");
   const [cepError, setCepError] = useState<string>();
+  const [needsAuth, setNeedsAuth] = useState(false);
   const formRef = useRef<ProfileForm>(empty);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error: apiError } = await api.GET("/api/v1/profile");
-    if (apiError) setError(problemMessage(apiError, "Entre para acessar seu perfil."));
+    const { data, error: apiError, response } = await api.GET("/api/v1/profile");
+    if (apiError) {
+      setNeedsAuth(response.status === 401);
+      setError(problemMessage(apiError, response.status === 401 ? "Entre para acessar seu perfil." : "Não foi possível carregar seu perfil."));
+    }
     if (data) {
       setProfile(data);
       setForm({
@@ -138,18 +144,18 @@ export function ProfileExperience() {
   async function resendVerification() {
     if (!profile) return;
     const result = await authClient.sendVerificationEmail({ email: profile.email, callbackURL: `${window.location.origin}/conta/verificada` });
-    if (result.error) toast.error(result.error.message ?? "Não foi possível reenviar."); else toast.success("E-mail reenviado.");
+    if (result.error) toast.error(authErrorMessage(result.error, "Não foi possível reenviar o e-mail. Tente novamente.")); else toast.success("E-mail reenviado.");
   }
 
   if (loading) return <main className="content-grid py-12"><StatePanel kind="loading" /></main>;
-  if (!profile) return <main className="content-grid py-12"><StatePanel kind="error" title="Sessão necessária" description={error} action={{ label: "Entrar", onClick: () => window.location.assign("/entrar?redirect=/perfil") }} /></main>;
+  if (!profile) return <main className="content-grid py-12"><StatePanel kind="error" title={needsAuth ? "Sessão necessária" : undefined} description={error} action={needsAuth ? { label: "Entrar", onClick: () => window.location.assign("/entrar?redirect=/perfil") } : { label: "Tentar novamente", onClick: () => void load() }} /></main>;
 
   return (
     <main className="content-grid py-10 sm:py-14">
       <PageHeader eyebrow="Minha conta" title="Seu perfil na Pulso" description="Mantenha seus dados atualizados para reservar ingressos e ativar a área do produtor." />
       <div className="mt-8 grid gap-6 lg:grid-cols-[300px_1fr]">
         <div className="space-y-4">
-          <Card><CardContent className="p-6"><span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><UserRound /></span><h2 className="mt-4 font-semibold text-white">{profile.name}</h2><p className="mt-1 truncate text-sm text-muted-foreground">{profile.email}</p><div className="mt-4 flex flex-wrap gap-2">{profile.roles.map((role) => <Badge key={role} variant="secondary">{role}</Badge>)}</div></CardContent></Card>
+          <Card><CardContent className="p-6"><span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><UserRound /></span><h2 className="mt-4 font-semibold text-white">{profile.name}</h2><p className="mt-1 truncate text-sm text-muted-foreground">{profile.email}</p><div className="mt-4 flex flex-wrap gap-2">{profile.roles.map((role) => <Badge key={role} variant="secondary">{roleLabel(role)}</Badge>)}</div></CardContent></Card>
           <Card><CardHeader><CardTitle className="text-base">Prontidão da conta</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><StatusLine done={profile.emailVerified} label="E-mail verificado" /><StatusLine done={profile.profileComplete} label="Perfil completo" /><StatusLine done={profile.roles.includes("organizer")} label="Área do produtor" /></CardContent></Card>
         </div>
 

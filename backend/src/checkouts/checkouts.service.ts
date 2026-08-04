@@ -1,21 +1,22 @@
-import { ConflictException, GoneException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, GoneException, Inject, Injectable, Logger, NotFoundException, ServiceUnavailableException, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
 import { randomUUID } from 'node:crypto';
-import { AuditAction, CheckoutStatus, EventStatus, Prisma, TicketUnitStatus } from '../generated/prisma/client.js';
+import { AuditAction, CheckoutStatus, EventStatus, PaymentStatus, Prisma, TicketUnitStatus } from '../generated/prisma/client.js';
 import { AuditService } from '../common/audit.service.js';
 import { assertIdempotencyKey } from '../common/idempotency.js';
 import { ProblemException } from '../common/problem.exception.js';
 import type { SessionUser } from '../common/request-context.js';
 import type { Env } from '../config/env.js';
 import { PrismaService } from '../database/prisma.service.js';
-import { PAYMENT_GATEWAY, type PaymentGateway } from '../payments/payment.gateway.js';
+import { PAYMENT_GATEWAY, type GatewayPaymentSession, type GatewayWebhookEvent, type PaymentGateway } from '../payments/payment.gateway.js';
 import { decryptPii } from '../security/pii.js';
 import { serializeOrder } from '../tickets/ticket.presenter.js';
 import type { CreateCheckoutDto } from './checkouts.dto.js';
 
 @Injectable()
 export class CheckoutsService {
+  private readonly logger = new Logger(CheckoutsService.name);
   private readonly ttlSeconds: number;
   private readonly presenceSeconds: number;
 
@@ -39,6 +40,7 @@ export class CheckoutsService {
       items: checkout.items,
       totalCents: checkout.totalCents,
       currency: 'BRL',
+      payment: checkout.paymentProvider ? { provider: checkout.paymentProvider, status: checkout.paymentStatus } : undefined,
       serverTime: new Date(),
       expiresAt: checkout.expiresAt,
       presenceExpiresAt: this.presentAfter(checkout.lastHeartbeatAt),
@@ -134,6 +136,46 @@ export class CheckoutsService {
     return this.serialize(checkout);
   }
 
+  async createPaymentSession(userId: string, checkoutId: string, key: string) {
+    assertIdempotencyKey(key);
+    const checkout = await this.prisma.checkout.findFirst({ where: { id: checkoutId, userId } });
+    if (!checkout) throw new NotFoundException('Checkout não encontrado.');
+    const now = new Date();
+    if (checkout.status !== CheckoutStatus.ACTIVE) throw new ConflictException('Checkout não está ativo.');
+    if (checkout.expiresAt <= now || this.presentAfter(checkout.lastHeartbeatAt) <= now) {
+      await this.release(checkout.id, checkout.expiresAt <= now ? CheckoutStatus.EXPIRED : CheckoutStatus.ABANDONED, userId);
+      throw new GoneException('Checkout expirado antes do pagamento.');
+    }
+
+    if (checkout.totalCents === 0) {
+      await this.prisma.checkout.update({ where: { id: checkout.id }, data: { paymentProvider: 'FREE', paymentReference: checkout.paymentReference ?? `free_${checkout.id}`, paymentStatus: PaymentStatus.SUCCEEDED } });
+      return { provider: 'FREE' as const, status: PaymentStatus.SUCCEEDED, requiresAction: false };
+    }
+
+    if (checkout.paymentReference && checkout.paymentProvider) {
+      if (checkout.paymentProvider !== this.payment.provider) throw new ServiceUnavailableException('O gateway deste checkout não corresponde à configuração atual.');
+      return this.resumePayment(checkout.id, checkout.paymentReference);
+    }
+
+    let session: GatewayPaymentSession;
+    try {
+      session = await this.payment.create({ checkoutId, userId, amountCents: checkout.totalCents, currency: 'BRL' });
+    } catch {
+      throw new ServiceUnavailableException('Não foi possível iniciar o pagamento de teste.');
+    }
+    const changed = await this.prisma.checkout.updateMany({
+      where: { id: checkout.id, userId, status: CheckoutStatus.ACTIVE, paymentReference: null },
+      data: { paymentProvider: session.provider, paymentReference: session.reference, paymentStatus: session.status as PaymentStatus }
+    });
+    if (!changed.count) {
+      const raced = await this.prisma.checkout.findFirst({ where: { id: checkout.id, userId } });
+      if (raced?.paymentReference && raced.paymentProvider === this.payment.provider) return this.resumePayment(raced.id, raced.paymentReference);
+      await this.reversePayment(checkout.id, session.reference);
+      throw new GoneException('Checkout encerrado durante a criação do pagamento.');
+    }
+    return this.paymentSessionResponse(session);
+  }
+
   async heartbeat(userId: string, checkoutId: string) {
     const now = new Date();
     const cutoff = new Date(now.getTime() - this.presenceSeconds * 1000);
@@ -163,19 +205,48 @@ export class CheckoutsService {
       const priorOrder = await this.prisma.order.findUnique({ where: { id: prior.resourceId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } } });
       return priorOrder ? serializeOrder(priorOrder) : null;
     }
-    const candidate = await this.prisma.checkout.findFirst({ where: { id: checkoutId, userId: user.id }, include: { event: true } });
+    return this.finalizePaidCheckout(user.id, checkoutId, key);
+  }
+
+  async handlePaymentWebhook(event: GatewayWebhookEvent): Promise<void> {
+    const checkout = await this.prisma.checkout.findFirst({ where: { id: event.checkoutId, userId: event.userId, paymentReference: event.reference } });
+    if (!checkout) return;
+    await this.prisma.checkout.update({ where: { id: checkout.id }, data: { paymentStatus: event.status as PaymentStatus } });
+    if (event.status !== 'SUCCEEDED') return;
+    try {
+      await this.finalizePaidCheckout(event.userId, event.checkoutId);
+    } catch (error) {
+      if (!(error instanceof ConflictException || error instanceof GoneException || error instanceof ProblemException)) throw error;
+      await this.reversePayment(event.checkoutId, event.reference, true);
+    }
+  }
+
+  private async finalizePaidCheckout(userId: string, checkoutId: string, key?: string) {
+    const existing = await this.prisma.order.findUnique({ where: { checkoutId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } } });
+    if (existing) {
+      if (existing.userId !== userId) throw new NotFoundException('Pedido não encontrado.');
+      return serializeOrder(existing);
+    }
+    const candidate = await this.prisma.checkout.findFirst({ where: { id: checkoutId, userId }, include: { event: true } });
     if (!candidate) throw new NotFoundException('Checkout não encontrado.');
     if (candidate.status !== CheckoutStatus.ACTIVE) throw new ConflictException('Checkout não está ativo.');
-    const authorization = await this.payment.authorize({ checkoutId, amountCents: candidate.totalCents, currency: 'BRL' });
-    if (!authorization.approved) throw new ConflictException('Confirmação simulada recusada.');
+    const authorization = candidate.totalCents === 0
+      ? { provider: 'FREE', approved: true, reference: candidate.paymentReference ?? `free_${checkoutId}` }
+      : await this.payment.authorize({ checkoutId, amountCents: candidate.totalCents, currency: 'BRL', reference: candidate.paymentReference });
+    if (!authorization.approved) throw new ProblemException('PAYMENT_NOT_CONFIRMED', 'Conclua o pagamento de teste antes de confirmar a reserva.', 409);
+    await this.prisma.checkout.update({ where: { id: checkoutId }, data: { paymentProvider: authorization.provider, paymentReference: authorization.reference, paymentStatus: PaymentStatus.SUCCEEDED } });
     const orderId = randomUUID();
     const publicId = `ORD-${Date.now().toString(36).toUpperCase()}-${randomUUID().slice(0, 6).toUpperCase()}`;
 
-    await this.withDeadlockRetry(() => this.prisma.$transaction(async (tx) => {
+    let result: { orderId: string; created: boolean };
+    try {
+      result = await this.withDeadlockRetry(() => this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw(Prisma.sql`SELECT id FROM Event WHERE id = ${candidate.eventId} FOR SHARE`);
       await tx.$queryRaw(Prisma.sql`SELECT id FROM Checkout WHERE id = ${checkoutId} FOR UPDATE`);
-      const checkout = await tx.checkout.findFirst({ where: { id: checkoutId, userId: user.id }, include: { items: true, event: true, user: { include: { profile: true } }, units: true } });
+      const checkout = await tx.checkout.findFirst({ where: { id: checkoutId, userId }, include: { items: true, event: true, user: { include: { profile: true } }, units: true } });
       if (!checkout) throw new NotFoundException('Checkout não encontrado.');
+      const priorOrder = await tx.order.findUnique({ where: { checkoutId } });
+      if (priorOrder) return { orderId: priorOrder.id, created: false };
       const now = new Date();
       if (checkout.event.status !== EventStatus.PUBLISHED) throw new ConflictException('O evento não está mais disponível para confirmação.');
       if (checkout.status !== CheckoutStatus.ACTIVE || checkout.expiresAt <= now || this.presentAfter(checkout.lastHeartbeatAt) <= now) throw new GoneException('Checkout expirado antes da confirmação.');
@@ -186,7 +257,7 @@ export class CheckoutsService {
           id: orderId,
           publicId,
           checkoutId,
-          userId: user.id,
+          userId,
           eventId: checkout.eventId,
           totalCents: checkout.totalCents,
           eventTitle: checkout.event.title,
@@ -204,21 +275,61 @@ export class CheckoutsService {
             city: checkout.user.profile.city,
             state: checkout.user.profile.state
           },
-          paymentProvider: authorization.provider
+          paymentProvider: authorization.provider,
+          paymentReference: authorization.reference
         }
       });
       for (const item of checkout.items) {
         const orderItem = await tx.orderItem.create({ data: { orderId, ticketTypeId: item.ticketTypeId, ticketTypeName: item.ticketTypeName, unitPriceCents: item.unitPriceCents, quantity: item.quantity } });
         const units = checkout.units.filter((unit) => unit.ticketTypeId === item.ticketTypeId);
-        await tx.issuedTicket.createMany({ data: units.map((unit) => ({ publicId: `TKT-${randomUUID()}`, orderItemId: orderItem.id, ownerId: user.id, eventId: checkout.eventId, ticketTypeId: item.ticketTypeId, unitSequence: unit.sequence })) });
+        await tx.issuedTicket.createMany({ data: units.map((unit) => ({ publicId: `TKT-${randomUUID()}`, orderItemId: orderItem.id, ownerId: userId, eventId: checkout.eventId, ticketTypeId: item.ticketTypeId, unitSequence: unit.sequence })) });
       }
       await tx.ticketUnit.updateMany({ where: { checkoutId, status: TicketUnitStatus.HELD }, data: { status: TicketUnitStatus.SOLD, checkoutId: null } });
-      await tx.checkout.update({ where: { id: checkoutId }, data: { status: CheckoutStatus.CONFIRMED, confirmedAt: now, terminalReason: null } });
-      await tx.idempotencyRecord.create({ data: { userId: user.id, scope: 'checkout:confirm', key, resourceId: orderId, responseCode: 201, expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) } });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 10_000 }));
-    await this.audit.write({ actorId: user.id, action: AuditAction.ORDER_CONFIRMED, entityType: 'Order', entityId: orderId, metadata: { checkoutId } });
-    const order = await this.prisma.order.findUniqueOrThrow({ where: { id: orderId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } } });
+      await tx.checkout.update({ where: { id: checkoutId }, data: { status: CheckoutStatus.CONFIRMED, confirmedAt: now, terminalReason: null, paymentStatus: PaymentStatus.SUCCEEDED } });
+      if (key) await tx.idempotencyRecord.upsert({
+        where: { userId_scope_key: { userId, scope: 'checkout:confirm', key } },
+        update: { resourceId: orderId, responseCode: 201, expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
+        create: { userId, scope: 'checkout:confirm', key, resourceId: orderId, responseCode: 201, expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) }
+      });
+      return { orderId, created: true };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 10_000 }));
+    } catch (error) {
+      if (error instanceof ConflictException || error instanceof GoneException || error instanceof ProblemException) await this.reversePayment(checkoutId, authorization.reference);
+      throw error;
+    }
+    if (result.created) await this.audit.write({ actorId: userId, action: AuditAction.ORDER_CONFIRMED, entityType: 'Order', entityId: result.orderId, metadata: { checkoutId, paymentProvider: authorization.provider } });
+    const order = await this.prisma.order.findUniqueOrThrow({ where: { id: result.orderId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } } });
     return serializeOrder(order);
+  }
+
+  private async resumePayment(checkoutId: string, reference: string) {
+    try {
+      const session = await this.payment.resume(reference);
+      await this.prisma.checkout.update({ where: { id: checkoutId }, data: { paymentStatus: session.status as PaymentStatus } });
+      return this.paymentSessionResponse(session);
+    } catch {
+      throw new ServiceUnavailableException('Não foi possível retomar o pagamento de teste.');
+    }
+  }
+
+  private paymentSessionResponse(session: GatewayPaymentSession) {
+    return {
+      provider: session.provider,
+      status: session.status,
+      requiresAction: session.requiresAction,
+      ...(session.clientSecret ? { clientSecret: session.clientSecret } : {}),
+      ...(session.publishableKey ? { publishableKey: session.publishableKey } : {})
+    };
+  }
+
+  private async reversePayment(checkoutId: string, reference: string, strict = false): Promise<void> {
+    try {
+      await this.payment.cancel(reference);
+      await this.prisma.checkout.updateMany({ where: { id: checkoutId, paymentReference: reference }, data: { paymentStatus: PaymentStatus.CANCELLED } });
+    } catch (error) {
+      this.logger.error(`Falha ao reverter pagamento de teste do checkout ${checkoutId}.`);
+      if (strict) throw error;
+    }
   }
 
   @Interval(10_000)
@@ -235,25 +346,26 @@ export class CheckoutsService {
   }
 
   private async release(checkoutId: string, status: CheckoutStatus, userId?: string): Promise<boolean> {
-    const changed = await this.withDeadlockRetry(() => this.prisma.$transaction(async (tx) => {
+    const outcome = await this.withDeadlockRetry(() => this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw(Prisma.sql`SELECT id FROM Checkout WHERE id = ${checkoutId} FOR UPDATE`);
       const checkout = await tx.checkout.findFirst({ where: { id: checkoutId, ...(userId ? { userId } : {}) } });
       if (!checkout) {
         if (userId) throw new NotFoundException('Checkout não encontrado.');
-        return false;
+        return { changed: false, paymentReference: null, paymentProvider: null };
       }
-      if (checkout.status !== CheckoutStatus.ACTIVE) return false;
+      if (checkout.status !== CheckoutStatus.ACTIVE) return { changed: false, paymentReference: checkout.paymentReference, paymentProvider: checkout.paymentProvider };
       await tx.ticketUnit.updateMany({ where: { checkoutId, status: TicketUnitStatus.HELD }, data: { status: TicketUnitStatus.AVAILABLE, checkoutId: null } });
-      await tx.checkout.update({ where: { id: checkoutId }, data: { status, terminalReason: status === CheckoutStatus.EXPIRED ? 'TTL_EXPIRED' : status === CheckoutStatus.ABANDONED ? 'PRESENCE_LOST' : 'USER_CANCELLED' } });
-      return true;
+      await tx.checkout.update({ where: { id: checkoutId }, data: { status, terminalReason: status === CheckoutStatus.EXPIRED ? 'TTL_EXPIRED' : status === CheckoutStatus.ABANDONED ? 'PRESENCE_LOST' : 'USER_CANCELLED', ...(checkout.paymentReference ? { paymentStatus: PaymentStatus.CANCELLED } : {}) } });
+      return { changed: true, paymentReference: checkout.paymentReference, paymentProvider: checkout.paymentProvider };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted }));
-    if (changed && status === CheckoutStatus.EXPIRED) {
+    if (outcome.changed && outcome.paymentReference && outcome.paymentProvider === this.payment.provider) await this.reversePayment(checkoutId, outcome.paymentReference);
+    if (outcome.changed && status === CheckoutStatus.EXPIRED) {
       await this.audit.write({ action: AuditAction.CHECKOUT_EXPIRED, entityType: 'Checkout', entityId: checkoutId });
     }
-    if (changed && status === CheckoutStatus.ABANDONED) {
+    if (outcome.changed && status === CheckoutStatus.ABANDONED) {
       await this.audit.write({ action: AuditAction.CHECKOUT_ABANDONED, entityType: 'Checkout', entityId: checkoutId });
     }
-    return changed;
+    return outcome.changed;
   }
 
   private async withDeadlockRetry<T>(operation: () => Promise<T>): Promise<T> {

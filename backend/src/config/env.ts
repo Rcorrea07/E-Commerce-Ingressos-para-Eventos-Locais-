@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+const optionalEnvironmentValue = (schema: z.ZodType<string>) => z.preprocess(
+  (value) => value === '' ? undefined : value,
+  schema.optional()
+);
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3001),
@@ -26,11 +31,20 @@ export const envSchema = z.object({
   PII_ENCRYPTION_KEY: z.string().regex(/^[a-fA-F0-9]{64}$/),
   PII_HASH_KEY: z.string().min(16),
   QR_SIGNING_SECRET: z.string().min(16),
+  PAYMENT_PROVIDER: z.enum(['simulated', 'stripe_test']).default('simulated'),
+  STRIPE_SECRET_KEY: optionalEnvironmentValue(z.string().regex(/^sk_test_[A-Za-z0-9_]+$/, 'Use somente uma chave secreta Stripe de teste.')),
+  STRIPE_PUBLISHABLE_KEY: optionalEnvironmentValue(z.string().regex(/^pk_test_[A-Za-z0-9_]+$/, 'Use somente uma chave publicável Stripe de teste.')),
+  STRIPE_WEBHOOK_SECRET: optionalEnvironmentValue(z.string().regex(/^whsec_[A-Za-z0-9_]+$/, 'Informe o segredo de assinatura do webhook Stripe.')),
   CHECKOUT_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   CHECKOUT_PRESENCE_SECONDS: z.coerce.number().int().min(30).default(60),
   SEED_ADMIN_EMAIL: z.email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
   SEED_DEMO_DATA: z.stringbool().default(false)
+}).superRefine((env, context) => {
+  if (env.PAYMENT_PROVIDER !== 'stripe_test') return;
+  for (const key of ['STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY', 'STRIPE_WEBHOOK_SECRET'] as const) {
+    if (!env[key]) context.addIssue({ code: 'custom', path: [key], message: `${key} é obrigatório quando PAYMENT_PROVIDER=stripe_test.` });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

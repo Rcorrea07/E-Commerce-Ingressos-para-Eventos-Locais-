@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuditAction, OrderStatus, Prisma, TicketStatus, TicketUnitStatus } from '../generated/prisma/client.js';
 import { AuditService } from '../common/audit.service.js';
@@ -6,13 +6,21 @@ import { assertIdempotencyKey } from '../common/idempotency.js';
 import { hasRole, type SessionUser } from '../common/request-context.js';
 import type { Env } from '../config/env.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { PAYMENT_GATEWAY, type PaymentGateway } from '../payments/payment.gateway.js';
 import { ProblemException } from '../common/problem.exception.js';
 import { createQrPayload, verifyQrPayload } from './qr.js';
 import { serializeOrder, serializeTicket } from './ticket.presenter.js';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService<Env, true>, private readonly audit: AuditService) {}
+  private readonly logger = new Logger(OrdersService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService<Env, true>,
+    private readonly audit: AuditService,
+    @Inject(PAYMENT_GATEWAY) private readonly payment: PaymentGateway
+  ) {}
 
   async listOrders(userId: string) {
     const orders = await this.prisma.order.findMany({ where: { userId }, include: { event: { select: { slug: true } }, items: { include: { tickets: true } } }, orderBy: { createdAt: 'desc' } });
@@ -29,7 +37,7 @@ export class OrdersService {
     assertIdempotencyKey(key);
     const prior = await this.prisma.idempotencyRecord.findUnique({ where: { userId_scope_key: { userId, scope: 'order:cancel', key } } });
     if (prior?.resourceId) return this.getOrder(userId, prior.resourceId);
-    const target = await this.prisma.order.findFirst({ where: { id: orderId, userId }, select: { eventId: true } });
+    const target = await this.prisma.order.findFirst({ where: { id: orderId, userId }, select: { eventId: true, paymentProvider: true, paymentReference: true } });
     if (!target) throw new NotFoundException('Pedido não encontrado.');
     await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw(Prisma.sql`SELECT id FROM Event WHERE id = ${target.eventId} FOR SHARE`);
@@ -49,6 +57,10 @@ export class OrdersService {
       await tx.idempotencyRecord.create({ data: { userId, scope: 'order:cancel', key, resourceId: orderId, responseCode: 200, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
     await this.audit.write({ actorId: userId, action: AuditAction.ORDER_CANCELLED, entityType: 'Order', entityId: orderId, metadata: { reason: 'CUSTOMER' } });
+    if (target.paymentReference && target.paymentProvider === this.payment.provider) {
+      try { await this.payment.cancel(target.paymentReference); }
+      catch { this.logger.error(`Falha ao reverter pagamento de teste do pedido ${orderId}.`); }
+    }
     return this.getOrder(userId, orderId);
   }
 

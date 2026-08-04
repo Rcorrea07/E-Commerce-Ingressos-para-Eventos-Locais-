@@ -398,6 +398,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/checkouts/{id}/payment-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Iniciar ou retomar pagamento do checkout */
+        post: operations["CheckoutsController_paymentSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/checkouts/{id}/confirm": {
         parameters: {
             query?: never;
@@ -409,6 +426,23 @@ export interface paths {
         put?: never;
         /** Confirmar checkout e emitir ingressos */
         post: operations["CheckoutsController_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/stripe/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Receber eventos assinados da Stripe */
+        post: operations["StripeWebhooksController_webhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1331,6 +1365,11 @@ export interface components {
             totalCents: number;
             /** @enum {string} */
             currency: "BRL";
+            payment?: {
+                provider: string;
+                /** @enum {string|null} */
+                status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | null;
+            };
             /** Format: date-time */
             serverTime: string;
             /** Format: date-time */
@@ -1353,6 +1392,15 @@ export interface components {
             id: string;
             /** @enum {string} */
             status: "ACTIVE" | "CONFIRMED" | "CANCELLED" | "EXPIRED" | "ABANDONED";
+        };
+        PaymentSessionResponseDto: {
+            /** @enum {string} */
+            provider: "FREE" | "SIMULATED" | "STRIPE_TEST";
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+            requiresAction: boolean;
+            clientSecret?: string;
+            publishableKey?: string;
         };
         OrderResponseDto: {
             /** Format: uuid */
@@ -1396,6 +1444,10 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             cancelledAt: string | null;
+        };
+        PaymentWebhookResponseDto: {
+            /** @enum {boolean} */
+            received: true;
         };
         TicketResponseDto: {
             /** Format: uuid */
@@ -3789,6 +3841,101 @@ export interface operations {
             };
         };
     };
+    CheckoutsController_paymentSession: {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSessionResponseDto"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Autenticação necessária */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Operação não autorizada */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Conflito com o estado atual */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Recurso expirado ou encerrado */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Regra de negócio não atendida */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     CheckoutsController_confirm: {
         parameters: {
             query?: never;
@@ -3875,6 +4022,45 @@ export interface operations {
             };
             /** @description Limite de requisições excedido */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    StripeWebhooksController_webhook: {
+        parameters: {
+            query?: never;
+            header: {
+                "stripe-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentWebhookResponseDto"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Dependência indisponível */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
