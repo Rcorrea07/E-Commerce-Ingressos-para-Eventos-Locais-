@@ -11,7 +11,7 @@ export function EventCard({ event, priority = false }: { event: EventSummary; pr
   const lowestPrice = event.ticketTypes.filter((ticket) => ticket.active).sort((a, b) => a.priceCents - b.priceCents)[0];
 
   return (
-    <Card className="group overflow-hidden border-white/8 bg-card/72 p-0 transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_24px_80px_rgba(23,14,35,.58)]">
+    <Card className="group overflow-hidden bg-card/72 p-0 transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:smooth-shadow-ring-lg hover:smooth-ring-primary/35">
       <Link href={`/eventos/${event.slug}`} className="block">
         <div className="relative aspect-[16/10] overflow-hidden bg-muted">
           <Image

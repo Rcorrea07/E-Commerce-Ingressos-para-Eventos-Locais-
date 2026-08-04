@@ -155,7 +155,7 @@ export function CheckoutExperience({ checkoutId }: { checkoutId: string }) {
             <Alert className="border-cyan-300/15 bg-cyan-300/5"><ShieldCheck className="text-cyan-300" /><AlertTitle>Pagamento do MVP é simulado</AlertTitle><AlertDescription>Nenhuma cobrança real será feita. Ao confirmar, os ingressos serão emitidos imediatamente.</AlertDescription></Alert>
           </div>
 
-          <Card className="h-fit border-white/10 bg-card/88">
+          <Card className="h-fit bg-card/88">
             <CardHeader><CardTitle className="text-base">Resumo do pedido</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-4">

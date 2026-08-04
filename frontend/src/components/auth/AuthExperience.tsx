@@ -43,7 +43,7 @@ export function AuthExperience({ mode }: { mode: "sign-in" | "sign-up" }) {
   if (created) {
     return (
       <AuthShell>
-        <Card className="surface-glow border-white/10 bg-card/88">
+        <Card className="smooth-shadow-ring-lg smooth-ring-white/10 shadow-black/40 bg-card/88">
           <CardContent className="flex flex-col items-center px-7 py-10 text-center">
             <span className="grid size-14 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-300"><CheckCircle2 /></span>
             <h1 className="mt-5 text-2xl font-semibold tracking-[-0.04em] text-white">Confira seu e-mail</h1>
@@ -57,7 +57,7 @@ export function AuthExperience({ mode }: { mode: "sign-in" | "sign-up" }) {
 
   return (
     <AuthShell>
-      <Card className="surface-glow border-white/10 bg-card/88">
+      <Card className="smooth-shadow-ring-lg smooth-ring-white/10 shadow-black/40 bg-card/88">
         <CardHeader className="px-7 pt-7">
           <div className="mb-4 flex items-center gap-3"><BrandMark /><span className="text-xs font-semibold uppercase tracking-[.2em] text-primary">Pulso</span></div>
           <CardTitle className="text-2xl tracking-[-0.04em]">{signingUp ? "Crie sua conta" : "Que bom ter você de volta"}</CardTitle>

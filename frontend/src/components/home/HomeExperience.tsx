@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, CalendarCheck2, ChevronDown, LoaderCircle, MapPin, Search, ShieldCheck, TicketCheck } from "lucide-react";
 import { EventCard } from "@/components/events/Eventcard";
 import { HeroCarousel } from "@/components/home/HeroCarousel";
@@ -14,6 +14,8 @@ import type { Category, EventSummary } from "@/lib/api/types";
 import { formatShortDate } from "@/lib/format";
 import { problemMessage } from "@/lib/api/problem";
 
+type CitySuggestion = { city: string; state: string };
+
 export function HomeExperience() {
   const router = useRouter();
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -24,6 +26,11 @@ export function HomeExperience() {
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [city, setCity] = useState("");
+  const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
+  const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
+  const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
+  const [activeCitySuggestion, setActiveCitySuggestion] = useState(-1);
+  const skipNextCitySuggestionsRef = useRef(false);
   const [categoryId, setCategoryId] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -60,6 +67,48 @@ export function HomeExperience() {
     };
   }, [city, search]);
 
+  useEffect(() => {
+    const term = city.trim();
+    if (term.length < 2) return;
+    if (skipNextCitySuggestionsRef.current) {
+      skipNextCitySuggestionsRef.current = false;
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setCitySuggestionsLoading(true);
+      try {
+        const { data } = await api.GET("/api/v1/events", {
+          params: { query: { page: 1, pageSize: 100, sort: "startsAt", city: term } },
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+
+        const unique = new Map<string, CitySuggestion>();
+        for (const event of data?.data ?? []) {
+          const suggestion = { city: event.city.trim(), state: event.state.trim().toUpperCase() };
+          unique.set(`${suggestion.city.toLocaleLowerCase("pt-BR")}::${suggestion.state}`, suggestion);
+        }
+        setCitySuggestions([...unique.values()].slice(0, 6));
+        setCitySuggestionsOpen(true);
+        setActiveCitySuggestion(-1);
+      } catch {
+        if (!controller.signal.aborted) {
+          setCitySuggestions([]);
+          setCitySuggestionsOpen(false);
+        }
+      } finally {
+        if (!controller.signal.aborted) setCitySuggestionsLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [city]);
+
   const loadEvents = useCallback(async (filters?: { search?: string; city?: string; categoryId?: string }) => {
     setLoading(true);
     setError(undefined);
@@ -88,6 +137,16 @@ export function HomeExperience() {
     }
   }
 
+  function changeCity(value: string) {
+    setCity(value);
+    setActiveCitySuggestion(-1);
+    if (value.trim().length < 2) {
+      setCitySuggestions([]);
+      setCitySuggestionsOpen(false);
+      setCitySuggestionsLoading(false);
+    }
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
     setSuggestionsOpen(false);
@@ -99,6 +158,13 @@ export function HomeExperience() {
     setSuggestionsOpen(false);
     setActiveSuggestion(-1);
     router.push(`/eventos/${suggestion.slug}`);
+  }
+
+  function selectCitySuggestion(suggestion: CitySuggestion) {
+    skipNextCitySuggestionsRef.current = true;
+    setCity(suggestion.city);
+    setCitySuggestionsOpen(false);
+    setActiveCitySuggestion(-1);
   }
 
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -123,6 +189,28 @@ export function HomeExperience() {
     }
   }
 
+  function handleCityKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!citySuggestionsOpen || !citySuggestions.length) {
+      if (event.key === "Escape") setCitySuggestionsOpen(false);
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveCitySuggestion((current) => (current + 1) % citySuggestions.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveCitySuggestion((current) => (current <= 0 ? citySuggestions.length - 1 : current - 1));
+    } else if (event.key === "Enter" && activeCitySuggestion >= 0) {
+      event.preventDefault();
+      const suggestion = citySuggestions[activeCitySuggestion];
+      if (suggestion) selectCitySuggestion(suggestion);
+    } else if (event.key === "Escape") {
+      setCitySuggestionsOpen(false);
+      setActiveCitySuggestion(-1);
+    }
+  }
+
   function chooseCategory(id?: string) {
     setCategoryId(id);
     void loadEvents({ search: search || undefined, city: city || undefined, categoryId: id });
@@ -132,16 +220,18 @@ export function HomeExperience() {
   const remaining = useMemo(() => events.slice(featured ? 1 : 0), [events, featured]);
   return (
     <main>
-      <section className="relative isolate min-h-[calc(100svh-4rem)] overflow-hidden border-b border-white/8">
-        <div className="brand-grid absolute inset-0 -z-20 opacity-45" />
-        <div className="absolute left-1/2 top-0 -z-20 h-[34rem] w-[70rem] -translate-x-1/2 rounded-full bg-primary/12 blur-[130px]" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/15 via-background/55 to-background" />
+      <section className="relative z-20 isolate min-h-[calc(100svh-4rem)] border-b border-white/8">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-20 overflow-hidden">
+          <div className="brand-grid absolute inset-0 opacity-45" />
+          <div className="absolute left-1/2 top-0 h-[34rem] w-[70rem] -translate-x-1/2 rounded-full bg-primary/12 blur-[130px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/15 via-background/55 to-background" />
+        </div>
 
         <div className="px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-5">
           <HeroCarousel events={events} />
 
           <div className="content-grid mt-4">
-            <form onSubmit={submit} className="surface-glow mx-auto grid max-w-4xl gap-2 rounded-2xl border border-white/10 bg-black/45 p-2 backdrop-blur-xl sm:grid-cols-[1fr_1fr_auto]">
+            <form onSubmit={submit} className="smooth-shadow-ring-lg smooth-ring-primary/18 shadow-black/40 relative z-30 mx-auto grid max-w-4xl gap-2 rounded-2xl bg-black/45 p-2 backdrop-blur-xl sm:grid-cols-[1fr_1fr_auto]">
               <label className="relative">
                 <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -160,7 +250,7 @@ export function HomeExperience() {
                   aria-activedescendant={activeSuggestion >= 0 ? `event-search-suggestion-${activeSuggestion}` : undefined}
                 />
                 {suggestionsOpen && (
-                  <div id="event-search-suggestions" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-white/10 bg-[#17121f] p-1.5 shadow-2xl shadow-black/40">
+                  <div id="event-search-suggestions" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl bg-[#17121f] p-1.5 smooth-shadow-ring-md smooth-ring-white/10 shadow-black/40">
                     {suggestionsLoading ? (
                       <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground" role="status">
                         <LoaderCircle className="size-4 animate-spin" /> Buscando eventos...
@@ -191,9 +281,51 @@ export function HomeExperience() {
                   </div>
                 )}
               </label>
-              <label className="relative">
+              <label className="relative z-20">
                 <MapPin className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={city} onChange={(event) => setCity(event.target.value)} placeholder="Cidade" className="h-12 border-0 bg-white/5 pl-10 shadow-none" />
+                <Input
+                  value={city}
+                  onChange={(event) => changeCity(event.target.value)}
+                  onFocus={() => { if (city.trim().length >= 2) setCitySuggestionsOpen(true); }}
+                  onBlur={() => window.setTimeout(() => setCitySuggestionsOpen(false), 150)}
+                  onKeyDown={handleCityKeyDown}
+                  placeholder="Cidade"
+                  className="h-12 border-0 bg-white/5 pl-10 shadow-none"
+                  role="combobox"
+                  aria-label="Filtrar por cidade"
+                  aria-autocomplete="list"
+                  aria-expanded={citySuggestionsOpen}
+                  aria-controls="city-search-suggestions"
+                  aria-activedescendant={activeCitySuggestion >= 0 ? `city-search-suggestion-${activeCitySuggestion}` : undefined}
+                />
+                {citySuggestionsOpen && (
+                  <div id="city-search-suggestions" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl bg-[#17121f] p-1.5 smooth-shadow-ring-md smooth-ring-white/10 shadow-black/40">
+                    {citySuggestionsLoading ? (
+                      <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground" role="status">
+                        <LoaderCircle className="size-4 animate-spin" /> Buscando cidades...
+                      </div>
+                    ) : citySuggestions.length ? (
+                      citySuggestions.map((suggestion, index) => (
+                        <button
+                          key={`${suggestion.city}-${suggestion.state}`}
+                          id={`city-search-suggestion-${index}`}
+                          type="button"
+                          role="option"
+                          aria-selected={activeCitySuggestion === index}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onMouseEnter={() => setActiveCitySuggestion(index)}
+                          onClick={() => selectCitySuggestion(suggestion)}
+                          className={`flex w-full items-center justify-between gap-4 rounded-lg px-3 py-2.5 text-left transition ${activeCitySuggestion === index ? "bg-primary/15" : "hover:bg-white/6"}`}
+                        >
+                          <span className="truncate text-sm font-medium text-white">{suggestion.city}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{suggestion.state}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-3 py-3 text-sm text-muted-foreground">Nenhuma cidade encontrada.</p>
+                    )}
+                  </div>
+                )}
               </label>
               <Button type="submit" size="lg" className="h-12 px-6">Encontrar eventos <ArrowRight /></Button>
             </form>
@@ -206,7 +338,7 @@ export function HomeExperience() {
           </div>
         </div>
 
-        <a href="#eventos" className="absolute bottom-3 left-1/2 hidden -translate-x-1/2 items-center gap-1.5 text-[11px] font-medium text-white/40 transition hover:text-white/70 [@media(min-height:850px)]:flex">
+        <a href="#eventos" className="absolute bottom-3 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-1.5 text-[11px] font-medium text-white/40 transition hover:text-white/70 [@media(min-height:850px)]:flex">
           Role para ver todos <ChevronDown className="size-3.5" />
         </a>
       </section>

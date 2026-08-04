@@ -79,21 +79,30 @@ function HeroCover({
 export function HeroCarousel({ events }: { events: EventSummary[] }) {
   const slides = events.slice(0, 7);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [paused, setPaused] = useState(false);
   const normalizedIndex = slides.length ? activeIndex % slides.length : 0;
   const activeEvent = slides[normalizedIndex] ?? slides[0];
 
   function move(direction: -1 | 1) {
+    setDirection(direction);
     setActiveIndex((current) => {
       if (slides.length < 2) return 0;
       return (current + direction + slides.length) % slides.length;
     });
   }
 
+  function selectSlide(index: number) {
+    const offset = circularOffset(index, normalizedIndex, slides.length);
+    if (offset !== 0) setDirection(offset > 0 ? 1 : -1);
+    setActiveIndex(index);
+  }
+
   useEffect(() => {
     if (paused || slides.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const slideCount = slides.length;
     const timer = window.setTimeout(() => {
+      setDirection(1);
       setActiveIndex((current) => (current + 1) % slideCount);
     }, 6500);
     return () => window.clearTimeout(timer);
@@ -117,22 +126,28 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
       aria-roledescription="carrossel"
       tabIndex={0}
       onKeyDown={(event) => {
-        if (event.key === "ArrowLeft") move(-1);
-        if (event.key === "ArrowRight") move(1);
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          move(-1);
+        }
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          move(1);
+        }
       }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      <div className="relative mx-auto h-[clamp(270px,min(36vw,55svh),580px)] max-w-[1280px]">
+      <div className="relative mx-auto h-[clamp(270px,min(36vw,55svh),580px)] max-w-[1280px] overflow-x-clip">
         {slides.length === 1 ? (
           <>
-            <div aria-hidden="true" className="absolute left-[1%] top-1/2 hidden h-[72%] w-[48%] -translate-y-1/2 -rotate-2 overflow-hidden rounded-[1.7rem] border border-white/10 opacity-45 shadow-2xl sm:block">
+            <div aria-hidden="true" className="absolute left-[1%] top-1/2 hidden h-[72%] w-[48%] -translate-y-1/2 -rotate-2 overflow-hidden rounded-[1.7rem] opacity-45 smooth-shadow-ring-lg smooth-ring-white/10 sm:block">
               <Image src="/images/Event_2.png" alt="" fill sizes="48vw" className="object-cover" />
               <div className="absolute inset-0 bg-background/25" />
             </div>
-            <div aria-hidden="true" className="absolute right-[1%] top-1/2 hidden h-[72%] w-[48%] -translate-y-1/2 rotate-2 overflow-hidden rounded-[1.7rem] border border-white/10 opacity-45 shadow-2xl sm:block">
+            <div aria-hidden="true" className="absolute right-[1%] top-1/2 hidden h-[72%] w-[48%] -translate-y-1/2 rotate-2 overflow-hidden rounded-[1.7rem] opacity-45 smooth-shadow-ring-lg smooth-ring-white/10 sm:block">
               <Image src="/images/Event_3.png" alt="" fill sizes="48vw" className="object-cover" />
               <div className="absolute inset-0 bg-background/25" />
             </div>
@@ -143,7 +158,6 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
           const offset = circularOffset(index, normalizedIndex, slides.length);
           const distance = Math.abs(offset);
           const isActive = offset === 0;
-          if (distance > 1) return null;
           const cover = event.images.find((image) => image.kind === "COVER")?.url;
           const card = (
             <>
@@ -166,12 +180,15 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
             <div
               key={event.id}
               aria-hidden={!isActive}
-              className={`${isActive ? "block" : "hidden sm:block"} group absolute left-1/2 top-1/2 h-full w-[92%] overflow-hidden rounded-[1.7rem] border bg-card shadow-[0_28px_100px_rgba(0,0,0,.58)] transition-[transform,opacity] duration-500 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none sm:w-[74%] ${isActive ? "border-primary/35" : "border-white/10"}`}
+              data-active={isActive}
+              className={`hero-carousel-card group absolute left-1/2 top-1/2 block h-full w-[92%] overflow-hidden rounded-[1.7rem] bg-card smooth-shadow-ring-xl ${isActive ? "smooth-ring-primary/35" : "smooth-ring-white/10"} transition-[transform,opacity,filter,box-shadow] duration-700 ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none sm:w-[74%]`}
               style={{
                 zIndex: 30 - distance,
-                opacity: isActive ? 1 : 0.42,
-                pointerEvents: "auto",
-                transform: `translate(-50%, -50%) translateX(${offset * 42}%) scale(${isActive ? 1 : Math.max(0.72, 0.9 - distance * 0.08)})`,
+                opacity: isActive ? 1 : distance === 1 ? 0.42 : 0,
+                filter: isActive ? "saturate(1)" : `saturate(${Math.max(0.45, 0.82 - distance * 0.12)})`,
+                pointerEvents: isActive || distance === 1 ? "auto" : "none",
+                transform: `translate(-50%, -50%) translateX(${offset * 42}%) scale(${isActive ? 1 : Math.max(0.76, 0.9 - distance * 0.08)})`,
+                transformOrigin: "center center",
                 willChange: "transform, opacity",
               }}
             >
@@ -182,7 +199,7 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
                 onClick={(clickEvent) => {
                   if (isActive) return;
                   clickEvent.preventDefault();
-                  setActiveIndex(index);
+                  selectSlide(index);
                 }}
                 className="block size-full cursor-pointer"
               >
@@ -219,7 +236,7 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
           <button
             key={event.id}
             type="button"
-            onClick={() => setActiveIndex(index)}
+            onClick={() => selectSlide(index)}
             aria-label={`Ir para ${event.title}`}
             aria-current={index === normalizedIndex ? "true" : undefined}
             className={`h-1.5 rounded-full transition-all ${index === normalizedIndex ? "w-8 bg-primary" : "w-1.5 bg-white/20 hover:bg-white/45"}`}
@@ -227,7 +244,7 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
         ))}
       </div>
 
-      <div key={activeEvent.id} className="animate-in fade-in slide-in-from-bottom-1 mx-auto mt-2 max-w-4xl px-4 text-center duration-300 motion-reduce:animate-none">
+      <div key={activeEvent.id} aria-live="polite" className={`animate-in fade-in ${direction === 1 ? "slide-in-from-right-3" : "slide-in-from-left-3"} mx-auto mt-2 max-w-4xl px-4 text-center duration-500 motion-reduce:animate-none`}>
         <p className="text-xs font-semibold uppercase tracking-[.2em] text-primary">Em destaque na Pulso</p>
         <h2 className="mt-1 text-balance text-xl font-semibold tracking-[-0.045em] text-white sm:text-3xl">{activeEvent.title}</h2>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-muted-foreground sm:text-sm">

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, type ComponentProps, useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, CircleAlert, LoaderCircle, ShieldCheck, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -15,9 +15,11 @@ import { api } from "@/lib/api/client";
 import { fieldErrors, problemMessage } from "@/lib/api/problem";
 import type { Profile } from "@/lib/api/types";
 import { authClient } from "@/lib/auth-client";
+import { formatCep, lookupCep, normalizeCep } from "@/lib/cep";
 
 type ProfileForm = { name: string; phone: string; cpf: string; postalCode: string; street: string; number: string; complement: string; district: string; city: string; state: string };
 const empty: ProfileForm = { name: "", phone: "", cpf: "", postalCode: "", street: "", number: "", complement: "", district: "", city: "", state: "" };
+type CepStatus = "idle" | "loading" | "found" | "notFound" | "unavailable";
 
 export function ProfileExperience() {
   const [profile, setProfile] = useState<Profile>();
@@ -25,6 +27,9 @@ export function ProfileExperience() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [cepStatus, setCepStatus] = useState<CepStatus>("idle");
+  const [cepError, setCepError] = useState<string>();
+  const formRef = useRef<ProfileForm>(empty);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -36,7 +41,7 @@ export function ProfileExperience() {
         name: data.name,
         phone: data.profile?.phone ?? "",
         cpf: "",
-        postalCode: data.profile?.postalCode ?? "",
+        postalCode: normalizeCep(data.profile?.postalCode ?? ""),
         street: data.profile?.street ?? "",
         number: data.profile?.number ?? "",
         complement: data.profile?.complement ?? "",
@@ -49,14 +54,76 @@ export function ProfileExperience() {
   }, []);
 
   useEffect(() => { void Promise.resolve().then(load); }, [load]);
+  useEffect(() => { formRef.current = form; }, [form]);
 
-  function update(field: keyof ProfileForm, value: string) { setForm((current) => ({ ...current, [field]: value })); }
+  const findCep = useCallback(async (postalCode: string, snapshot: ProfileForm, signal: AbortSignal) => {
+    setCepStatus("loading");
+    setCepError(undefined);
+
+    try {
+      const address = await lookupCep(postalCode, signal);
+      if (signal.aborted) return;
+      if (!address) {
+        setCepStatus("notFound");
+        setCepError("CEP não encontrado. Confira os números ou preencha o endereço manualmente.");
+        return;
+      }
+
+      setForm((current) => ({
+        ...current,
+        street: current.street === snapshot.street && address.street ? address.street : current.street,
+        district: current.district === snapshot.district && address.district ? address.district : current.district,
+        city: current.city === snapshot.city ? address.city : current.city,
+        state: current.state === snapshot.state ? address.state : current.state,
+      }));
+      setCepStatus("found");
+    } catch {
+      if (signal.aborted) return;
+      setCepStatus("unavailable");
+      setCepError("Não foi possível consultar o CEP agora. Você pode preencher o endereço manualmente.");
+    }
+  }, []);
+
+  useEffect(() => {
+    const postalCode = normalizeCep(form.postalCode);
+    if (postalCode.length !== 8) return;
+
+    const controller = new AbortController();
+    const snapshot = formRef.current;
+    void findCep(postalCode, snapshot, controller.signal);
+
+    return () => controller.abort();
+  }, [findCep, form.postalCode]);
+
+  function update(field: keyof ProfileForm, value: string) {
+    if (field === "postalCode") {
+      setError(undefined);
+      setCepStatus("idle");
+      setCepError(undefined);
+    }
+    setForm((current) => ({ ...current, [field]: value }));
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    const postalCode = normalizeCep(form.postalCode);
+    if (postalCode.length !== 8) {
+      setCepStatus("notFound");
+      setCepError("Informe um CEP válido com 8 dígitos.");
+      setError("Confira o CEP antes de salvar o perfil.");
+      return;
+    }
+    if (cepStatus === "loading") {
+      setError("Aguarde a validação do CEP terminar.");
+      return;
+    }
+    if (cepStatus === "notFound") {
+      setError("Confira o CEP antes de salvar o perfil.");
+      return;
+    }
     setBusy(true);
     setError(undefined);
-    const { data, error: apiError } = await api.PATCH("/api/v1/profile", { body: { ...form, complement: form.complement || undefined, state: form.state.toUpperCase() } });
+    const { data, error: apiError } = await api.PATCH("/api/v1/profile", { body: { ...form, postalCode, complement: form.complement || undefined, state: form.state.toUpperCase() } });
     if (apiError) {
       const validation = fieldErrors(apiError).map((item) => item.message).filter(Boolean).join(" · ");
       setError(validation || problemMessage(apiError));
@@ -97,7 +164,12 @@ export function ProfileExperience() {
                 <div className="space-y-2 sm:col-span-2"><Label htmlFor="cpf">CPF</Label><Input id="cpf" value={form.cpf} onChange={(event) => update("cpf", event.target.value.replace(/\D/g, "").slice(0, 11))} placeholder={profile.profile?.cpf ?? "Somente números"} inputMode="numeric" required /><p className="text-[11px] text-muted-foreground">Por segurança, o CPF é exibido apenas mascarado e deve ser informado novamente ao salvar.</p></div>
               </div>
               <div className="border-t border-white/8 pt-6"><h3 className="mb-4 text-sm font-medium text-white">Endereço</h3><div className="grid gap-4 sm:grid-cols-6">
-                <div className="sm:col-span-2"><Field label="CEP" id="postalCode" value={form.postalCode} onChange={(value) => update("postalCode", value.replace(/\D/g, "").slice(0, 8))} autoComplete="postal-code" /></div>
+                <div className="sm:col-span-2">
+                  <Field label="CEP" id="postalCode" value={formatCep(form.postalCode)} onChange={(value) => update("postalCode", normalizeCep(value))} autoComplete="postal-code" inputMode="numeric" maxLength={9} placeholder="00000-000" aria-invalid={cepStatus === "notFound"} />
+                  {cepStatus === "loading" && <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground"><LoaderCircle className="size-3 animate-spin" /> Consultando endereço...</p>}
+                  {cepStatus === "found" && <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-300"><CheckCircle2 className="size-3" /> Endereço preenchido automaticamente.</p>}
+                  {cepError && <p className={`mt-1 flex items-center gap-1 text-[11px] ${cepStatus === "unavailable" ? "text-amber-300" : "text-destructive"}`} role="alert"><CircleAlert className="size-3" /> {cepError}</p>}
+                </div>
                 <div className="sm:col-span-4"><Field label="Rua" id="street" value={form.street} onChange={(value) => update("street", value)} autoComplete="address-line1" /></div>
                 <div className="sm:col-span-2"><Field label="Número" id="number" value={form.number} onChange={(value) => update("number", value)} /></div>
                 <div className="sm:col-span-4"><Field label="Complemento" id="complement" value={form.complement} onChange={(value) => update("complement", value)} required={false} /></div>
@@ -106,7 +178,7 @@ export function ProfileExperience() {
                 <div className="sm:col-span-1"><Field label="UF" id="state" value={form.state} onChange={(value) => update("state", value.toUpperCase().slice(0, 2))} autoComplete="address-level1" /></div>
               </div></div>
               {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-              <div className="flex justify-end"><Button type="submit" disabled={busy}>{busy && <LoaderCircle className="animate-spin" />}{busy ? "Salvando..." : "Salvar perfil"}</Button></div>
+              <div className="flex justify-end"><Button type="submit" disabled={busy || cepStatus === "loading"}>{busy && <LoaderCircle className="animate-spin" />}{busy ? "Salvando..." : "Salvar perfil"}</Button></div>
             </form>
           </CardContent>
         </Card>
@@ -115,7 +187,7 @@ export function ProfileExperience() {
   );
 }
 
-function Field({ label, id, value, onChange, required = true, ...props }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; placeholder?: string; autoComplete?: string }) {
+function Field({ label, id, value, onChange, required = true, ...props }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean } & Omit<ComponentProps<typeof Input>, "id" | "value" | "onChange" | "required">) {
   return <div className="space-y-2"><Label htmlFor={id}>{label}</Label><Input id={id} value={value} onChange={(event) => onChange(event.target.value)} required={required} {...props} /></div>;
 }
 

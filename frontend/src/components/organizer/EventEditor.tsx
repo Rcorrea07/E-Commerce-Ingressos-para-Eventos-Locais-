@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowLeft, ArrowUp, CircleAlert, ImagePlus, LoaderCircle, Pencil, Plus, Send, Ticket, Trash2, UserPlus, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -23,10 +23,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import { fieldErrors, problemMessage } from "@/lib/api/problem";
 import type { Category, OrganizerEvent, StaffInvitation } from "@/lib/api/types";
+import { formatCep, lookupCep, normalizeCep } from "@/lib/cep";
 import { formatDateTime, formatMoney } from "@/lib/format";
 
 type EventForm = { categoryId: string; title: string; slug: string; description: string; venueName: string; postalCode: string; street: string; number: string; complement: string; district: string; city: string; state: string; startsAt: string; endsAt: string; timezone: string };
 const blank: EventForm = { categoryId: "", title: "", slug: "", description: "", venueName: "", postalCode: "", street: "", number: "", complement: "", district: "", city: "", state: "", startsAt: "", endsAt: "", timezone: "America/Sao_Paulo" };
+type CepStatus = "idle" | "loading" | "found" | "notFound" | "unavailable";
 
 export function EventEditor({ eventId }: { eventId?: string }) {
   const router = useRouter(); const editing = Boolean(eventId); const [event, setEvent] = useState<OrganizerEvent>(); const [categories, setCategories] = useState<Category[]>([]); const [form, setForm] = useState<EventForm>(blank); const [loading, setLoading] = useState(editing); const [busy, setBusy] = useState(false); const [error, setError] = useState<string>(); const [confirmAction, setConfirmAction] = useState<"submit" | "cancel">();
@@ -42,11 +44,11 @@ export function EventEditor({ eventId }: { eventId?: string }) {
     setLoading(false);
   }, [editing, eventId]);
   useEffect(() => { void Promise.resolve().then(load); }, [load]);
-  function update(field: keyof EventForm, value: string) { setForm((current) => ({ ...current, [field]: value, ...(field === "title" && !editing ? { slug: slugify(value) } : {}) })); }
+  const update = useCallback((field: keyof EventForm, value: string) => { setForm((current) => ({ ...current, [field]: value, ...(field === "title" && !editing ? { slug: slugify(value) } : {}) })); }, [editing]);
 
   async function save(eventSubmit: FormEvent) {
     eventSubmit.preventDefault(); setBusy(true); setError(undefined);
-    const body = { ...form, complement: form.complement || undefined, startsAt: new Date(form.startsAt).toISOString(), endsAt: new Date(form.endsAt).toISOString(), state: form.state.toUpperCase() };
+    const body = { ...form, postalCode: normalizeCep(form.postalCode), complement: form.complement || undefined, startsAt: new Date(form.startsAt).toISOString(), endsAt: new Date(form.endsAt).toISOString(), state: form.state.toUpperCase() };
     const result = editing && eventId ? await api.PATCH("/api/v1/organizer/events/{id}", { params: { path: { id: eventId } }, body: { categoryId: body.categoryId, title: body.title, description: body.description, venueName: body.venueName, postalCode: body.postalCode, street: body.street, number: body.number, complement: body.complement, district: body.district, city: body.city, state: body.state, startsAt: body.startsAt, endsAt: body.endsAt, timezone: body.timezone } }) : await api.POST("/api/v1/organizer/events", { body });
     if (result.error) { const validation = fieldErrors(result.error).map((item) => item.message).filter(Boolean).join(" · "); setError(validation || problemMessage(result.error)); }
     else if (result.data) { toast.success(editing ? "Evento atualizado." : "Rascunho criado."); if (!editing) router.replace(`/produtor/eventos/${result.data.id}`); else await load(); }
@@ -68,7 +70,73 @@ export function EventEditor({ eventId }: { eventId?: string }) {
 }
 
 function EventDataForm({ form, categories, editing, editable, busy, error, update, submit }: { form: EventForm; categories: Category[]; editing: boolean; editable: boolean; busy: boolean; error?: string; update: (field: keyof EventForm, value: string) => void; submit: (event: FormEvent) => void }) {
-  return <Card><CardHeader><CardTitle className="text-base">Informações do evento</CardTitle></CardHeader><CardContent><form onSubmit={submit} className="space-y-6"><fieldset disabled={!editable || busy} className="space-y-6"><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Título" id="title" value={form.title} onChange={(value) => update("title", value)} /><div className="space-y-2"><Label>Categoria</Label><Select value={form.categoryId} onValueChange={(value) => update("categoryId", value)} required><SelectTrigger className="w-full"><SelectValue placeholder="Escolha uma categoria" /></SelectTrigger><SelectContent>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select></div>{!editing && <EditorField label="Slug público" id="slug" value={form.slug} onChange={(value) => update("slug", slugify(value))} />}<div className={!editing ? "" : "sm:col-span-2"}><EditorField label="Local" id="venueName" value={form.venueName} onChange={(value) => update("venueName", value)} /></div><div className="space-y-2 sm:col-span-2"><Label htmlFor="description">Descrição</Label><Textarea id="description" value={form.description} onChange={(event) => update("description", event.target.value)} minLength={20} rows={5} required /></div><EditorField label="Início" id="startsAt" type="datetime-local" value={form.startsAt} onChange={(value) => update("startsAt", value)} /><EditorField label="Fim" id="endsAt" type="datetime-local" value={form.endsAt} onChange={(value) => update("endsAt", value)} /></div><div className="border-t border-white/8 pt-6"><h3 className="mb-4 text-sm font-medium text-white">Endereço do local</h3><div className="grid gap-4 sm:grid-cols-6"><div className="sm:col-span-2"><EditorField label="CEP" id="postalCode" value={form.postalCode} onChange={(value) => update("postalCode", value.replace(/\D/g, "").slice(0, 8))} /></div><div className="sm:col-span-4"><EditorField label="Rua" id="street" value={form.street} onChange={(value) => update("street", value)} /></div><div className="sm:col-span-2"><EditorField label="Número" id="number" value={form.number} onChange={(value) => update("number", value)} /></div><div className="sm:col-span-4"><EditorField label="Complemento" id="complement" value={form.complement} onChange={(value) => update("complement", value)} required={false} /></div><div className="sm:col-span-2"><EditorField label="Bairro" id="district" value={form.district} onChange={(value) => update("district", value)} /></div><div className="sm:col-span-3"><EditorField label="Cidade" id="city" value={form.city} onChange={(value) => update("city", value)} /></div><div className="sm:col-span-1"><EditorField label="UF" id="state" value={form.state} onChange={(value) => update("state", value.toUpperCase().slice(0, 2))} /></div></div></div></fieldset>{error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}{editable && <div className="flex justify-end"><Button type="submit" disabled={busy}>{busy && <LoaderCircle className="animate-spin" />}{editing ? "Salvar alterações" : "Criar rascunho"}</Button></div>}</form></CardContent></Card>;
+  const [cepStatus, setCepStatus] = useState<CepStatus>("idle");
+  const [cepError, setCepError] = useState<string>();
+  const formRef = useRef<EventForm>(form);
+
+  useEffect(() => { formRef.current = form; }, [form]);
+
+  const findCep = useCallback(async (postalCode: string, snapshot: EventForm, signal: AbortSignal) => {
+    setCepStatus("loading");
+    setCepError(undefined);
+
+    try {
+      const address = await lookupCep(postalCode, signal);
+      if (signal.aborted) return;
+      if (!address) {
+        setCepStatus("notFound");
+        setCepError("CEP não encontrado. Confira os números ou preencha o endereço manualmente.");
+        return;
+      }
+
+      const current = formRef.current;
+      if (current.street === snapshot.street && address.street) update("street", address.street);
+      if (current.district === snapshot.district && address.district) update("district", address.district);
+      if (current.city === snapshot.city && address.city) update("city", address.city);
+      if (current.state === snapshot.state && address.state) update("state", address.state);
+      setCepStatus("found");
+    } catch {
+      if (signal.aborted) return;
+      setCepStatus("unavailable");
+      setCepError("Não foi possível consultar o CEP agora. Você pode preencher o endereço manualmente.");
+    }
+  }, [update]);
+
+  useEffect(() => {
+    const postalCode = normalizeCep(form.postalCode);
+    if (postalCode.length !== 8) return;
+    const controller = new AbortController();
+    void findCep(postalCode, formRef.current, controller.signal);
+    return () => controller.abort();
+  }, [findCep, form.postalCode]);
+
+  function updatePostalCode(value: string) {
+    setCepStatus("idle");
+    setCepError(undefined);
+    update("postalCode", normalizeCep(value));
+  }
+
+  function handleSubmit(eventSubmit: FormEvent) {
+    const postalCode = normalizeCep(form.postalCode);
+    if (postalCode.length !== 8) {
+      eventSubmit.preventDefault();
+      setCepStatus("notFound");
+      setCepError("Informe um CEP válido com 8 dígitos.");
+      return;
+    }
+    if (cepStatus === "idle" || cepStatus === "loading") {
+      eventSubmit.preventDefault();
+      setCepError("Aguarde a validação do CEP terminar.");
+      return;
+    }
+    if (cepStatus === "notFound") {
+      eventSubmit.preventDefault();
+      return;
+    }
+    submit(eventSubmit);
+  }
+
+  return <Card><CardHeader><CardTitle className="text-base">Informações do evento</CardTitle></CardHeader><CardContent><form onSubmit={handleSubmit} className="space-y-6"><fieldset disabled={!editable || busy} className="space-y-6"><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Título" id="title" value={form.title} onChange={(value) => update("title", value)} /><div className="space-y-2"><Label>Categoria</Label><Select value={form.categoryId} onValueChange={(value) => update("categoryId", value)} required><SelectTrigger className="w-full"><SelectValue placeholder="Escolha uma categoria" /></SelectTrigger><SelectContent>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select></div>{!editing && <EditorField label="Slug público" id="slug" value={form.slug} onChange={(value) => update("slug", slugify(value))} />}<div className={!editing ? "" : "sm:col-span-2"}><EditorField label="Local" id="venueName" value={form.venueName} onChange={(value) => update("venueName", value)} /></div><div className="space-y-2 sm:col-span-2"><Label htmlFor="description">Descrição</Label><Textarea id="description" value={form.description} onChange={(event) => update("description", event.target.value)} minLength={20} rows={5} required /></div><EditorField label="Início" id="startsAt" type="datetime-local" value={form.startsAt} onChange={(value) => update("startsAt", value)} /><EditorField label="Fim" id="endsAt" type="datetime-local" value={form.endsAt} onChange={(value) => update("endsAt", value)} /></div><div className="border-t border-white/8 pt-6"><h3 className="mb-4 text-sm font-medium text-white">Endereço do local</h3><div className="grid gap-4 sm:grid-cols-6"><div className="sm:col-span-2"><EditorField label="CEP" id="postalCode" value={formatCep(form.postalCode)} onChange={updatePostalCode} />{cepStatus === "loading" && <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground"><LoaderCircle className="size-3 animate-spin" /> Consultando endereço...</p>}{cepStatus === "found" && <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-300">Endereço preenchido automaticamente.</p>}{cepError && <p className={`mt-1 text-[11px] ${cepStatus === "unavailable" ? "text-amber-300" : "text-destructive"}`} role="alert">{cepError}</p>}</div><div className="sm:col-span-4"><EditorField label="Rua" id="street" value={form.street} onChange={(value) => update("street", value)} /></div><div className="sm:col-span-2"><EditorField label="Número" id="number" value={form.number} onChange={(value) => update("number", value)} /></div><div className="sm:col-span-4"><EditorField label="Complemento" id="complement" value={form.complement} onChange={(value) => update("complement", value)} required={false} /></div><div className="sm:col-span-2"><EditorField label="Bairro" id="district" value={form.district} onChange={(value) => update("district", value)} /></div><div className="sm:col-span-3"><EditorField label="Cidade" id="city" value={form.city} onChange={(value) => update("city", value)} /></div><div className="sm:col-span-1"><EditorField label="UF" id="state" value={form.state} onChange={(value) => update("state", value.toUpperCase().slice(0, 2))} /></div></div></div></fieldset>{error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}{editable && <div className="flex justify-end"><Button type="submit" disabled={busy || cepStatus === "loading"}>{busy && <LoaderCircle className="animate-spin" />}{editing ? "Salvar alterações" : "Criar rascunho"}</Button></div>}</form></CardContent></Card>;
 }
 
 function TicketTypesPanel({ event, editable, onChange }: { event: OrganizerEvent; editable: boolean; onChange: () => Promise<void> }) {
@@ -120,4 +188,4 @@ function StaffPanel({ event }: { event: OrganizerEvent }) {
 function EditorField({ label, id, value, onChange, type = "text", required = true }: { label: string; id: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) { return <div className="space-y-2"><Label htmlFor={id}>{label}</Label><Input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} /></div>; }
 function slugify(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 function toInput(value: string) { const date = new Date(value); const offset = date.getTimezoneOffset() * 60_000; return new Date(date.getTime() - offset).toISOString().slice(0, 16); }
-function fromEvent(event: OrganizerEvent): EventForm { return { categoryId: event.categoryId, title: event.title, slug: event.slug, description: event.description, venueName: event.venueName, postalCode: event.postalCode, street: event.street, number: event.number, complement: event.complement ?? "", district: event.district, city: event.city, state: event.state, startsAt: toInput(event.startsAt), endsAt: toInput(event.endsAt), timezone: event.timezone }; }
+function fromEvent(event: OrganizerEvent): EventForm { return { categoryId: event.categoryId, title: event.title, slug: event.slug, description: event.description, venueName: event.venueName, postalCode: normalizeCep(event.postalCode), street: event.street, number: event.number, complement: event.complement ?? "", district: event.district, city: event.city, state: event.state, startsAt: toInput(event.startsAt), endsAt: toInput(event.endsAt), timezone: event.timezone }; }

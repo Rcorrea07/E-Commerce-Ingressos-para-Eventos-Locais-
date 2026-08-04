@@ -87,7 +87,7 @@ export function EventDetails({ slug }: { slug: string }) {
         <div className="content-grid py-8 sm:py-12">
           <Button variant="ghost" asChild className="mb-8 -ml-3 text-muted-foreground"><Link href="/"><ChevronLeft /> Voltar aos eventos</Link></Button>
           <div className="grid items-end gap-8 lg:grid-cols-[1fr_1.08fr]">
-            <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-card surface-glow">
+            <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-card smooth-shadow-ring-md smooth-ring-white/10 shadow-black/30">
               <Image src={cover ?? "/images/Event_1.png"} alt={`Capa de ${event.title}`} fill priority className="object-cover" sizes="(max-width:1024px) 100vw, 50vw" />
             </div>
             <div className="pb-2">
