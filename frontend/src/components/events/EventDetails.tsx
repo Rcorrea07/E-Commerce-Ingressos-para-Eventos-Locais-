@@ -103,25 +103,22 @@ export function EventDetails({ slug }: { slug: string }) {
         </div>
       </section>
 
-      <section className="content-grid mt-10 grid gap-8 lg:grid-cols-[1fr_390px]">
-        <div className="space-y-8">
-          <div className="rounded-2xl border border-white/8 bg-card/58 p-6 sm:p-8">
-            <div className="flex items-center gap-2 text-primary"><Sparkles className="size-4" /><span className="text-xs font-semibold uppercase tracking-[.2em]">Sobre a experiência</span></div>
-            <h2 className="mt-4 text-2xl font-semibold tracking-[-0.035em] text-white">Tudo o que você precisa saber</h2>
-            <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{event.description}</p>
-          </div>
-
-          {gallery.length > 0 && (
-            <div>
-              <h2 className="mb-4 text-xl font-semibold text-white">Um pouco do que vem por aí</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {gallery.map((image) => <div key={image.id} className="relative aspect-video overflow-hidden rounded-xl border border-white/8"><Image src={image.url!} alt={`Galeria de ${event.title}`} fill className="object-cover" sizes="50vw" /></div>)}
-              </div>
-            </div>
-          )}
-
+      <section className="content-grid mt-10 space-y-8">
+        <div className="rounded-2xl border border-white/8 bg-card/58 p-6 sm:p-8">
+          <div className="flex items-center gap-2 text-primary"><Sparkles className="size-4" /><span className="text-xs font-semibold uppercase tracking-[.2em]">Sobre a experiência</span></div>
+          <h2 className="mt-4 text-2xl font-semibold tracking-[-0.035em] text-white">Tudo o que você precisa saber</h2>
+          <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{event.description}</p>
         </div>
         <TicketSelector event={event} busy={busy} onContinue={startCheckout} />
+
+        {gallery.length > 0 && (
+          <div>
+            <h2 className="mb-4 text-xl font-semibold text-white">Um pouco do que vem por aí</h2>
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
+              {gallery.map((image) => <div key={image.id} className="relative aspect-video overflow-hidden rounded-xl border border-white/8"><Image src={image.url!} alt={`Galeria de ${event.title}`} fill className="object-cover" sizes="50vw" /></div>)}
+            </div>
+          </div>
+        )}
       </section>
 
       <AlertDialog open={Boolean(activeCheckoutId)} onOpenChange={(open) => !open && setActiveCheckoutId(undefined)}>

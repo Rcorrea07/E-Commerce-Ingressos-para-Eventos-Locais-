@@ -10,8 +10,13 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Pulso — eventos que acontecem perto", template: "%s · Pulso" },
+  title: { default: "Pulso", template: "%s · Pulso" },
   description: "Descubra eventos locais, reserve ingressos e leve sua próxima experiência no bolso.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

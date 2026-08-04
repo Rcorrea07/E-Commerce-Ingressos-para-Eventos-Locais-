@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Pulso</title>
+  <defs>
+    <linearGradient id="background" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a78bfa" />
+      <stop offset="0.55" stop-color="#8b5cf6" />
+      <stop offset="1" stop-color="#67e8f9" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#background)" />
+  <path d="M14 32c5.4-10.4 11.4-15.6 18-15.6S44.6 21.6 50 32c-5.4 10.4-11.4 15.6-18 15.6S19.4 42.4 14 32Z" fill="none" stroke="#160d2b" stroke-width="4.8" />
+  <circle cx="32" cy="32" r="6.4" fill="#160d2b" />
+  <path d="M9 32H4M60 32h-5" fill="none" stroke="#160d2b" stroke-width="4.8" stroke-linecap="round" />
+</svg>

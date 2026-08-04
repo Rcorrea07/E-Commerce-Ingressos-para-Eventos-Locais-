@@ -30,7 +30,7 @@ export function DashboardShell({ area, children }: { area: keyof typeof navigati
   const names = { organizer: "Área do produtor", gate: "Portaria", admin: "Administração" };
   return (
     <main className="content-grid py-8 sm:py-10">
-      <div className="grid gap-6 lg:grid-cols-[230px_1fr]">
+      <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="h-fit min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/8 bg-card/55 p-3 lg:sticky lg:top-24">
           <div className="flex items-center gap-3 px-3 py-3"><BrandMark className="size-8 rounded-lg" /><div><p className="text-xs text-muted-foreground">Pulso</p><h2 className="text-sm font-medium text-white">{names[area]}</h2></div></div>
           <nav className="mt-3 flex gap-2 overflow-x-auto lg:flex-col" aria-label={names[area]}>

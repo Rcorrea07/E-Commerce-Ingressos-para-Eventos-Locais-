@@ -33,3 +33,6 @@ Thumbs.db
 
 # Cobertura de testes
 coverage/
+
+.agents/
+skills-lock.json
