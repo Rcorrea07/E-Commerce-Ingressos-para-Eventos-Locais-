@@ -44,7 +44,7 @@ export function EventCard({ event }: EventCardProps) {
         <div className="mt-3 flex items-center justify-between">
           <span className="text-lg font-bold text-purple-400">{formattedPrice}</span>
             <Link 
-              href={`/checkout?id=${event.id}`}
+              href={`/detalhes?id=${event.id}`}
               className="text-sm font-medium text-purple-400 hover:text-purple-300 hover:underline transition"
             >
               Ver evento →

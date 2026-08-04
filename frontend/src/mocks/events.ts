@@ -7,6 +7,8 @@ export interface Event {
   price: number;
   category: string;
   image?: string;
+  description?: string;
+  organization?: string;
 }
 
 export const events: Event[] = [
@@ -19,6 +21,8 @@ export const events: Event[] = [
     price: 89.90,
     category: 'Festa',
     image: '/images/Event_1.png',
+    description: 'Prepare-se para uma experiência imersiva repleta de luzes neon, DJs renomados e muita energia. O festival reúne o melhor da música eletrônica em uma estrutura épica e futurista. Venha viver uma noite inesquecível com efeitos visuais surpreendentes.',
+    organization: 'Neon Group',
   },
   {
     id: '2',
@@ -29,6 +33,8 @@ export const events: Event[] = [
     price: 59.90,
     category: 'Festa',
     image: '/images/Event_2.png',
+    description: 'Celebre o pôr do sol à beira-mar com o melhor do house music, drinks exclusivos e um clima paradisíaco. Uma festa pé na areia pensada para quem quer curtir a energia do litoral. Aproveite a vibe única e venha conectar-se com boas vibrações.',
+    organization: 'Samba da praia',
   },
   {
     id: '3',
@@ -39,6 +45,8 @@ export const events: Event[] = [
     price: 45.00,
     category: 'Música',
     image: '/images/Event_3.png',
+    description: 'Uma noite intimista com performances marcantes dos melhores músicos de jazz e blues da região. Desfrute de um ambiente aconchegante acompanhado de uma cartela de vinhos e petiscos especiais. O refúgio perfeito para os amantes de boa música e sofisticação.',
+    organization: 'Fantasmas do Jazz',
   },
   {
     id: '4',
@@ -48,6 +56,8 @@ export const events: Event[] = [
     location: 'Curitiba, PR',
     price: 199.00,
     category: 'Negócios',
+    description: 'O maior encontro de tecnologia e inovação do ano reunindo os principais nomes do mercado digital. Participe de palestras inspiradoras, workshops práticos e amplie sua rede de contatos. Fique por dentro das maiores tendências em IA, programação e negócios.',
+    organization: 'Instituto Nacional de Telecomunicações, INATEL',
   },
   {
     id: '5',
@@ -57,5 +67,9 @@ export const events: Event[] = [
     location: 'Salvador, BA',
     price: 0.00,
     category: 'Cultural',
+    description: 'Explore a riqueza da cultura local através de peças únicas feitas à mão por artesãos talentosos. O evento conta com exposições, oficinas gratuitas e barracas de comidas típicas maravilhosas. Um passeio perfeito e enriquecedor para toda a família.',
+    organization: 'Artistas sem fronteiras',
   },
 ];
+
+// descrições feitas com ia
