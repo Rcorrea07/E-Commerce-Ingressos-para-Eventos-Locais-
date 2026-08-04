@@ -3,11 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, Clock3, MapPin, ShieldCheck, Sparkles } from "lucide-react";
+import { CalendarDays, ChevronLeft, Clock3, MapPin, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { TicketSelection, TicketSelector } from "@/components/events/TicketSelector";
 import { StatePanel } from "@/components/states/StatePanel";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -121,11 +120,6 @@ export function EventDetails({ slug }: { slug: string }) {
             </div>
           )}
 
-          <Alert className="border-cyan-300/15 bg-cyan-300/5">
-            <ShieldCheck className="text-cyan-300" />
-            <AlertTitle>Compra simulada e reserva segura</AlertTitle>
-            <AlertDescription>Seu ingresso é individual, com QR assinado e validação de uso único na entrada.</AlertDescription>
-          </Alert>
         </div>
         <TicketSelector event={event} busy={busy} onContinue={startCheckout} />
       </section>

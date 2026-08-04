@@ -10,6 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+  --font-heading: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -89,6 +90,11 @@
     background: oklch(0.72 0.19 294 / 35%);
     color: white;
   }
+
+  img {
+    outline: 1px solid oklch(1 0 0 / 10%);
+    outline-offset: -1px;
+  }
 }
 
 @layer utilities {
@@ -111,6 +117,28 @@
 
 .hero-carousel-card {
   backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(button, a, input, textarea, select, [role="button"], [role="combobox"], [role="tab"]):focus-visible {
+    outline: 2px solid CanvasText !important;
+    outline-offset: 3px;
+  }
 }
 
 @media (max-width: 639px) {

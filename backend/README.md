@@ -26,7 +26,9 @@ sequenceDiagram
     loop A cada 15 segundos
         F->>A: POST /checkouts/:id/heartbeat
     end
-    U->>F: Confirma pedido
+    F->>A: POST /checkouts/:id/payment-session
+    A-->>F: clientSecret do PaymentIntent
+    U->>F: Confirma cartão no Payment Element
     F->>A: POST /checkouts/:id/confirm
     A->>D: HELD → SOLD e gera ingressos
     A-->>F: pedido confirmado
@@ -44,7 +46,8 @@ Não existem os modelos `Cart` ou `CartItem` e não deve existir uma tela de car
 - MinIO para imagens de eventos;
 - Mailpit para visualizar e-mails no desenvolvimento;
 - Pino para logs JSON;
-- Swagger e OpenAPI para documentação e geração do cliente do front.
+- Swagger e OpenAPI para documentação e geração do cliente do front;
+- Stripe Payment Element e webhooks, exclusivamente com chaves de teste.
 
 ## Estrutura de pastas
 
@@ -57,7 +60,7 @@ Não existem os modelos `Cart` ou `CartItem` e não deve existir uma tela de car
 | `src/profile/` | Nome, telefone, CPF protegido e endereço do cliente |
 | `src/events/` | Categorias, eventos, tipos, capacidade e imagens |
 | `src/checkouts/` | Reserva, heartbeat, expiração, cancelamento e confirmação |
-| `src/payments/` | Interface de pagamento e implementação simulada |
+| `src/payments/` | Interface de pagamento, fallback simulado e Stripe Test |
 | `src/tickets/` | Pedidos, ingressos, QR e validação da portaria |
 | `src/invitations/` | Convites para organizadores e equipes de portaria |
 | `src/analytics/` | Funil, receita simulada, ocupação e validações |
@@ -123,7 +126,7 @@ Um job executado a cada 10 segundos procura reservas vencidas ou abandonadas.
 
 ### Pedidos e QR
 
-A confirmação simulada transforma as unidades em `SOLD`, cria um pedido com snapshots e emite um ingresso individual por unidade. O QR contém apenas o ID público e uma assinatura HMAC.
+A confirmação validada transforma as unidades em `SOLD`, cria um pedido com snapshots e emite um ingresso individual por unidade. Em Stripe Test, o backend confere referência, valor, moeda, metadata e estado do PaymentIntent; o webhook assinado recupera confirmações interrompidas. O QR contém apenas o ID público e uma assinatura HMAC.
 
 A primeira leitura autorizada marca o ingresso como `USED`. Uma nova leitura retorna `TICKET_ALREADY_USED`. A ordem dos locks também impede que o cancelamento devolva ao estoque uma unidade usada simultaneamente.
 

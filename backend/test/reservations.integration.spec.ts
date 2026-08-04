@@ -61,7 +61,7 @@ describe.skipIf(!run)('reservas concorrentes no MySQL', () => {
       remove: vi.fn().mockResolvedValue(undefined)
     } as unknown as StorageService;
     service = new CheckoutsService(prisma, config, audit, new SimulatedPaymentGateway());
-    orders = new OrdersService(prisma, config, audit);
+    orders = new OrdersService(prisma, config, audit, new SimulatedPaymentGateway());
     invitations = new InvitationsService(prisma, { send: vi.fn().mockResolvedValue(undefined) } as unknown as MailService, config, audit);
     analytics = new AnalyticsService(prisma, config);
     admin = new AdminService(prisma, storage);
@@ -232,6 +232,8 @@ describe.skipIf(!run)('reservas concorrentes no MySQL', () => {
     await prisma.ticketUnit.create({ data: { ticketTypeId: type.id, sequence: 1 } });
     const user: SessionUser = { id: freeUser.id, name: freeUser.name, email: freeUser.email, emailVerified: true, role: freeUser.role };
     const checkout = await service.create(user, randomUUID(), { eventId, items: [{ ticketTypeId: type.id, quantity: 1 }] });
+    const paymentSession = await service.createPaymentSession(user.id, checkout.id, randomUUID());
+    expect(paymentSession).toMatchObject({ provider: 'SIMULATED', status: 'SUCCEEDED', requiresAction: false });
     const key = randomUUID();
     const first = await service.confirm(user, checkout.id, key);
     const repeated = await service.confirm(user, checkout.id, key);

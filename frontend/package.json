@@ -10,6 +10,8 @@
     "api:generate": "openapi-typescript ../docs/openapi.json -o src/lib/api/schema.d.ts"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "6.8.0",
+    "@stripe/stripe-js": "9.13.0",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "better-auth": "1.6.23",

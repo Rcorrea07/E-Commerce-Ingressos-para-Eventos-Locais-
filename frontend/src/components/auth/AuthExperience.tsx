@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { BrandMark } from "@/components/brand/Brand";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 export function AuthExperience({ mode }: { mode: "sign-in" | "sign-up" }) {
   const searchParams = useSearchParams();
@@ -30,11 +31,11 @@ export function AuthExperience({ mode }: { mode: "sign-in" | "sign-up" }) {
     setError(undefined);
     if (signingUp) {
       const result = await authClient.signUp.email({ name, email, password, callbackURL: redirect });
-      if (result.error) setError(result.error.message ?? "Não foi possível criar sua conta.");
+      if (result.error) setError(authErrorMessage(result.error, "Não foi possível criar sua conta. Tente novamente."));
       else setCreated(true);
     } else {
       const result = await authClient.signIn.email({ email, password, callbackURL: redirect });
-      if (result.error) setError(result.error.message ?? "E-mail ou senha inválidos.");
+      if (result.error) setError(authErrorMessage(result.error, "E-mail ou senha inválidos."));
       else window.location.assign(redirect);
     }
     setBusy(false);
@@ -48,7 +49,7 @@ export function AuthExperience({ mode }: { mode: "sign-in" | "sign-up" }) {
             <span className="grid size-14 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-300"><CheckCircle2 /></span>
             <h1 className="mt-5 text-2xl font-semibold tracking-[-0.04em] text-white">Confira seu e-mail</h1>
             <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">Enviamos o link de verificação para <strong className="text-white">{email}</strong>. Depois disso, sua conta estará pronta para reservar ingressos.</p>
-            <Button asChild className="mt-7 w-full"><Link href="/entrar">Ir para o login</Link></Button>
+            <Button asChild className="mt-7 w-full"><Link href="/entrar">Entrar</Link></Button>
           </CardContent>
         </Card>
       </AuthShell>
@@ -70,18 +71,17 @@ export function AuthExperience({ mode }: { mode: "sign-in" | "sign-up" }) {
             <div className="space-y-2">
               <div className="flex items-center justify-between"><Label htmlFor="password">Senha</Label>{!signingUp && <Link href="/esqueci-senha" className="text-xs text-primary hover:underline">Esqueci minha senha</Link>}</div>
               <div className="relative">
-                <Input id="password" type={showPassword ? "text" : "password"} autoComplete={signingUp ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required className="pr-10" />
+                <Input id="password" type={showPassword ? "text" : "password"} autoComplete={signingUp ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={signingUp ? 8 : undefined} required className="pr-10" />
                 <Button type="button" variant="ghost" size="icon-sm" className="absolute right-1.5 top-1/2 -translate-y-1/2" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeOff /> : <Eye />}</Button>
               </div>
             </div>
-            {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+            {error && <Alert variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
             <Button type="submit" className="h-11 w-full" disabled={busy}>{busy ? <><LoaderCircle className="animate-spin" /> Aguarde...</> : <>{signingUp ? "Criar minha conta" : "Entrar na Pulso"}<ArrowRight /></>}</Button>
           </form>
           <div className="mt-5 flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <span>{signingUp ? "Já tem uma conta?" : "Ainda não está na Pulso?"}</span>
             <Link href={signingUp ? "/entrar" : "/criar-conta"} className="font-medium text-primary hover:underline">{signingUp ? "Entrar" : "Criar conta"}</Link>
           </div>
-          <p className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground"><ShieldCheck className="size-3.5 text-cyan-300" /> Sessão protegida por cookie HttpOnly</p>
         </CardContent>
       </Card>
     </AuthShell>

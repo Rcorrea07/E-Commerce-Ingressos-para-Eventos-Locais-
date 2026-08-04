@@ -45,5 +45,5 @@ export function DashboardShell({ area, children }: { area: keyof typeof navigati
 }
 
 function DashboardLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: LucideIcon; active: boolean }) {
-  return <Link href={href} className={cn("flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition", active ? "bg-primary/12 text-primary" : "text-muted-foreground hover:bg-white/5 hover:text-white")}><Icon className="size-4" />{label}</Link>;
+  return <Link href={href} className={cn("flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-[background-color,color,box-shadow] motion-reduce:transition-none", active ? "bg-primary/12 text-primary" : "text-muted-foreground hover:bg-white/5 hover:text-white")}><Icon className="size-4" />{label}</Link>;
 }

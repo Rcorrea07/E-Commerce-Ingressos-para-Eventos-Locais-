@@ -26,6 +26,10 @@ x-api-environment: &api-environment
   PII_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   PII_HASH_KEY: local-hash-secret-change-before-production
   QR_SIGNING_SECRET: local-qr-secret-change-before-production
+  PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-simulated}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+  STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
   CHECKOUT_TTL_SECONDS: 900
   CHECKOUT_PRESENCE_SECONDS: 60
   SEED_ADMIN_EMAIL: admin@ingressos.local

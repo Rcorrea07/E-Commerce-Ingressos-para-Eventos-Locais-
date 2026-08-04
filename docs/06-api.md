@@ -16,10 +16,13 @@ Base da aplicação: `/api/v1`. Autenticação Better Auth: `/api/auth/*`. Swagg
 | GET | `/checkouts/:id` | Detalhe e relógios do servidor |
 | POST | `/checkouts/:id/heartbeat` | Renovar presença, não o TTL |
 | POST | `/checkouts/:id/cancel` | Liberar reserva |
+| POST | `/checkouts/:id/payment-session` | Iniciar ou retomar PaymentIntent; exige `Idempotency-Key` |
 | POST | `/checkouts/:id/confirm` | Confirmar; exige `Idempotency-Key` |
 | GET | `/orders` e `/orders/:id` | Histórico e detalhe |
 | POST | `/orders/:id/cancel` | Cancelar; exige `Idempotency-Key` |
 | GET | `/tickets` e `/tickets/:id` | Ingressos e QR assinado |
+
+O endpoint público `POST /payments/stripe/webhook` recebe eventos Stripe com assinatura verificada sobre o corpo bruto. Ele funciona como recuperação idempotente quando o navegador fecha após o pagamento e antes da confirmação local.
 
 ## Organização, portaria e administração
 

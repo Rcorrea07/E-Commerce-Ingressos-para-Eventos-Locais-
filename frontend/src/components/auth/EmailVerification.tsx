@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 export function EmailVerification({ verified = false }: { verified?: boolean }) {
   const { data: session } = authClient.useSession();
@@ -16,7 +17,7 @@ export function EmailVerification({ verified = false }: { verified?: boolean }) 
     if (!email) { window.location.assign("/entrar"); return; }
     setBusy(true);
     const result = await authClient.sendVerificationEmail({ email, callbackURL: `${window.location.origin}/conta/verificada` });
-    if (result.error) toast.error(result.error.message ?? "Não foi possível reenviar o e-mail.");
+    if (result.error) toast.error(authErrorMessage(result.error, "Não foi possível reenviar o e-mail. Tente novamente."));
     else toast.success("E-mail de verificação reenviado.");
     setBusy(false);
   }

@@ -9,7 +9,7 @@
 - DEC-007: transação `READ COMMITTED`, ordem estável e `FOR UPDATE SKIP LOCKED` para evitar oversell;
 - DEC-008: TTL absoluto de 15 minutos, heartbeat a cada 15 segundos e abandono após 60 segundos;
 - DEC-009: MinIO para uma capa e até seis imagens de galeria; falhas de remoção entram em fila persistente;
-- DEC-010: pagamento real fora do MVP; `PaymentGateway` simulado preserva o ponto de extensão;
+- DEC-010: pagamentos live continuam fora do MVP; `PaymentGateway` aceita o modo simulado ou Stripe Test com PaymentIntent, Payment Element e webhook assinado;
 - DEC-011: OpenAPI da aplicação e do Better Auth separados, ambos selecionáveis no Swagger;
 - DEC-012: Docker Compose executa migrations, bucket e seed como serviços one-shot;
 - DEC-013: não adotar Redis, microsserviços, assentos, fila virtual, ProxySQL ou dual write no MVP.

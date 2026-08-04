@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { authClient } from "@/lib/auth-client";
 import { rolesFromSession } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
@@ -51,7 +51,7 @@ export function AppHeader() {
             key={link.href}
             href={link.href}
             className={cn(
-              "rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/5 hover:text-white",
+              "flex min-h-10 items-center rounded-lg px-3 py-2 text-sm text-muted-foreground transition-[background-color,color] motion-reduce:transition-none hover:bg-white/5 hover:text-white",
               active && "bg-white/6 text-white",
             )}
           >
@@ -119,6 +119,20 @@ export function AppHeader() {
               <SheetTitle className="sr-only">Menu principal</SheetTitle>
               <Brand className="mb-8" />
               {navigation}
+              {!isPending && !user && (
+                <div className="mt-8 flex flex-col gap-2 border-t border-white/8 pt-6">
+                  <SheetClose asChild>
+                    <Button variant="outline" asChild>
+                      <Link href="/entrar">Entrar</Link>
+                    </Button>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Button asChild>
+                      <Link href="/criar-conta">Criar conta</Link>
+                    </Button>
+                  </SheetClose>
+                </div>
+              )}
             </SheetContent>
           </Sheet>
         </div>

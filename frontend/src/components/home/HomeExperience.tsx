@@ -250,7 +250,7 @@ export function HomeExperience() {
                   aria-activedescendant={activeSuggestion >= 0 ? `event-search-suggestion-${activeSuggestion}` : undefined}
                 />
                 {suggestionsOpen && (
-                  <div id="event-search-suggestions" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl bg-[#17121f] p-1.5 smooth-shadow-ring-md smooth-ring-white/10 shadow-black/40">
+                  <div id="event-search-suggestions" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl bg-popover p-1.5 smooth-shadow-ring-md smooth-ring-white/10 shadow-black/40">
                     {suggestionsLoading ? (
                       <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground" role="status">
                         <LoaderCircle className="size-4 animate-spin" /> Buscando eventos...
@@ -299,7 +299,7 @@ export function HomeExperience() {
                   aria-activedescendant={activeCitySuggestion >= 0 ? `city-search-suggestion-${activeCitySuggestion}` : undefined}
                 />
                 {citySuggestionsOpen && (
-                  <div id="city-search-suggestions" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl bg-[#17121f] p-1.5 smooth-shadow-ring-md smooth-ring-white/10 shadow-black/40">
+                  <div id="city-search-suggestions" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl bg-popover p-1.5 smooth-shadow-ring-md smooth-ring-white/10 shadow-black/40">
                     {citySuggestionsLoading ? (
                       <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground" role="status">
                         <LoaderCircle className="size-4 animate-spin" /> Buscando cidades...

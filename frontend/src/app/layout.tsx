@@ -18,9 +18,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable} dark`}>
       <body className="flex min-h-screen flex-col">
+        <a
+          href="#main-content"
+          className="sr-only z-[100] rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          Ir para o conteúdo principal
+        </a>
         <TooltipProvider>
           <AppHeader />
-          <div className="flex min-h-[calc(100vh-4rem)] flex-1 flex-col">{children}</div>
+          <div id="main-content" tabIndex={-1} className="flex min-h-[calc(100vh-4rem)] flex-1 flex-col outline-none">
+            {children}
+          </div>
           <AppFooter />
           <Toaster richColors position="top-right" />
         </TooltipProvider>

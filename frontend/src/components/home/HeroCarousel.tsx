@@ -65,7 +65,7 @@ function HeroCover({
       fill
       priority={priority}
       sizes="(max-width: 640px) 92vw, (max-width: 1280px) 74vw, 920px"
-      className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.018] motion-reduce:transition-none"
+      className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.018] motion-reduce:transition-none"
       onError={() => src && setInvalidSource(src)}
       onLoad={(event) => {
         if (src && (event.currentTarget.naturalWidth < 64 || event.currentTarget.naturalHeight < 64)) {
@@ -79,13 +79,11 @@ function HeroCover({
 export function HeroCarousel({ events }: { events: EventSummary[] }) {
   const slides = events.slice(0, 7);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [direction, setDirection] = useState<1 | -1>(1);
   const [paused, setPaused] = useState(false);
   const normalizedIndex = slides.length ? activeIndex % slides.length : 0;
   const activeEvent = slides[normalizedIndex] ?? slides[0];
 
   function move(direction: -1 | 1) {
-    setDirection(direction);
     setActiveIndex((current) => {
       if (slides.length < 2) return 0;
       return (current + direction + slides.length) % slides.length;
@@ -93,8 +91,6 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
   }
 
   function selectSlide(index: number) {
-    const offset = circularOffset(index, normalizedIndex, slides.length);
-    if (offset !== 0) setDirection(offset > 0 ? 1 : -1);
     setActiveIndex(index);
   }
 
@@ -102,7 +98,6 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
     if (paused || slides.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const slideCount = slides.length;
     const timer = window.setTimeout(() => {
-      setDirection(1);
       setActiveIndex((current) => (current + 1) % slideCount);
     }, 6500);
     return () => window.clearTimeout(timer);
@@ -121,7 +116,8 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
 
   return (
     <div
-      className="outline-none"
+      className="rounded-[2rem] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+      role="region"
       aria-label="Eventos em destaque"
       aria-roledescription="carrossel"
       tabIndex={0}
@@ -158,6 +154,7 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
           const offset = circularOffset(index, normalizedIndex, slides.length);
           const distance = Math.abs(offset);
           const isActive = offset === 0;
+          const scale = isActive ? 1 : Math.max(0.76, 0.9 - distance * 0.08);
           const cover = event.images.find((image) => image.kind === "COVER")?.url;
           const card = (
             <>
@@ -181,15 +178,14 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
               key={event.id}
               aria-hidden={!isActive}
               data-active={isActive}
-              className={`hero-carousel-card group absolute left-1/2 top-1/2 block h-full w-[92%] overflow-hidden rounded-[1.7rem] bg-card smooth-shadow-ring-xl ${isActive ? "smooth-ring-primary/35" : "smooth-ring-white/10"} transition-[transform,opacity,filter,box-shadow] duration-700 ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none sm:w-[74%]`}
+              className={`hero-carousel-card group transform-gpu absolute left-1/2 top-1/2 block h-full w-[92%] overflow-hidden rounded-[1.7rem] bg-card smooth-shadow-ring-xl ${isActive ? "smooth-ring-primary/35" : "smooth-ring-white/10"} transition-[transform,opacity] duration-500 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none sm:w-[74%]`}
               style={{
                 zIndex: 30 - distance,
                 opacity: isActive ? 1 : distance === 1 ? 0.42 : 0,
-                filter: isActive ? "saturate(1)" : `saturate(${Math.max(0.45, 0.82 - distance * 0.12)})`,
                 pointerEvents: isActive || distance === 1 ? "auto" : "none",
-                transform: `translate(-50%, -50%) translateX(${offset * 42}%) scale(${isActive ? 1 : Math.max(0.76, 0.9 - distance * 0.08)})`,
+                transform: `translate3d(-50%, -50%, 0) translate3d(${offset * 42}%, 0, 0) scale3d(${scale}, ${scale}, 1)`,
                 transformOrigin: "center center",
-                willChange: "transform, opacity",
+                willChange: isActive || distance === 1 ? "transform, opacity" : "auto",
               }}
             >
               <Link
@@ -215,7 +211,7 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
               type="button"
               aria-label="Evento anterior"
               onClick={() => move(-1)}
-              className="absolute left-1 top-1/2 z-40 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-background/85 text-secondary-foreground shadow-xl outline-none backdrop-blur-md transition-colors hover:bg-secondary focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:left-4"
+              className="absolute left-1 top-1/2 z-40 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-background/85 text-secondary-foreground shadow-xl outline-none backdrop-blur-md transition-[background-color,border-color,color,box-shadow] hover:bg-secondary focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none sm:left-4"
             >
               <ArrowLeft className="size-4" />
             </button>
@@ -223,7 +219,7 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
               type="button"
               aria-label="Próximo evento"
               onClick={() => move(1)}
-              className="absolute right-1 top-1/2 z-40 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-background/85 text-secondary-foreground shadow-xl outline-none backdrop-blur-md transition-colors hover:bg-secondary focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:right-4"
+              className="absolute right-1 top-1/2 z-40 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-background/85 text-secondary-foreground shadow-xl outline-none backdrop-blur-md transition-[background-color,border-color,color,box-shadow] hover:bg-secondary focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none sm:right-4"
             >
               <ArrowRight className="size-4" />
             </button>
@@ -231,7 +227,7 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
         ) : null}
       </div>
 
-      <div className="mx-auto mt-3 flex min-h-4 items-center justify-center gap-2" aria-label={`${normalizedIndex + 1} de ${slides.length}`}>
+      <div className="mx-auto mt-3 flex min-h-6 items-center justify-center gap-1" aria-label={`${normalizedIndex + 1} de ${slides.length}`}>
         {slides.map((event, index) => (
           <button
             key={event.id}
@@ -239,12 +235,14 @@ export function HeroCarousel({ events }: { events: EventSummary[] }) {
             onClick={() => selectSlide(index)}
             aria-label={`Ir para ${event.title}`}
             aria-current={index === normalizedIndex ? "true" : undefined}
-            className={`h-1.5 rounded-full transition-all ${index === normalizedIndex ? "w-8 bg-primary" : "w-1.5 bg-white/20 hover:bg-white/45"}`}
-          />
+            className="group relative grid size-6 place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+          >
+            <span aria-hidden="true" className={`block h-1.5 rounded-full transition-[background-color,width] motion-reduce:transition-none ${index === normalizedIndex ? "w-8 bg-primary" : "w-1.5 bg-white/20 group-hover:w-2 group-hover:bg-white/45"}`} />
+          </button>
         ))}
       </div>
 
-      <div key={activeEvent.id} aria-live="polite" className={`animate-in fade-in ${direction === 1 ? "slide-in-from-right-3" : "slide-in-from-left-3"} mx-auto mt-2 max-w-4xl px-4 text-center duration-500 motion-reduce:animate-none`}>
+      <div key={activeEvent.id} aria-live="polite" className="animate-in fade-in mx-auto mt-2 max-w-4xl px-4 text-center duration-200 motion-reduce:animate-none">
         <p className="text-xs font-semibold uppercase tracking-[.2em] text-primary">Em destaque na Pulso</p>
         <h2 className="mt-1 text-balance text-xl font-semibold tracking-[-0.045em] text-white sm:text-3xl">{activeEvent.title}</h2>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-muted-foreground sm:text-sm">

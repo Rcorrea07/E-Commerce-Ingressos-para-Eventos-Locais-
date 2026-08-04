@@ -5,7 +5,7 @@ import { ApiProtected } from '../common/openapi.decorators.js';
 import { CurrentUser } from '../common/session-user.decorator.js';
 import type { SessionUser } from '../common/request-context.js';
 import { OrderResponseDto } from '../tickets/tickets.dto.js';
-import { CheckoutResponseDto, CheckoutStatusResponseDto, CreateCheckoutDto, HeartbeatResponseDto } from './checkouts.dto.js';
+import { CheckoutResponseDto, CheckoutStatusResponseDto, CreateCheckoutDto, HeartbeatResponseDto, PaymentSessionResponseDto } from './checkouts.dto.js';
 import { CheckoutsService } from './checkouts.service.js';
 
 @ApiTags('Checkouts')
@@ -42,6 +42,12 @@ export class CheckoutsController {
   @Post(':id/cancel')
   @HttpCode(200)
   cancel(@CurrentUser() user: SessionUser, @Param('id') id: string) { return this.service.cancel(user.id, id); }
+
+  @ApiOperation({ summary: 'Iniciar ou retomar pagamento do checkout' })
+  @ApiCreatedResponse({ type: PaymentSessionResponseDto })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post(':id/payment-session')
+  paymentSession(@CurrentUser() user: SessionUser, @Param('id') id: string, @Headers('idempotency-key') key: string) { return this.service.createPaymentSession(user.id, id, key); }
 
   @ApiOperation({ summary: 'Confirmar checkout e emitir ingressos' })
   @ApiCreatedResponse({ type: OrderResponseDto })

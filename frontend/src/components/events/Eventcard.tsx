@@ -19,12 +19,12 @@ export function EventCard({ event, priority = false }: { event: EventSummary; pr
             alt={`Capa do evento ${event.title}`}
             fill
             priority={priority}
-            className="object-cover transition duration-500 group-hover:scale-[1.04]"
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:scale-100 motion-reduce:transition-none"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/5 to-transparent" />
           <Badge className="absolute left-3 top-3 border-white/15 bg-black/55 text-white backdrop-blur-md">{event.category.name}</Badge>
-          {event.soldOut && <Badge variant="destructive" className="absolute right-3 top-3">Esgotado</Badge>}
+          {event.soldOut && <Badge className="absolute right-3 top-3 border-white/15 bg-black/70 text-destructive backdrop-blur-md">Esgotado</Badge>}
           <div className="absolute bottom-3 left-3 rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs font-medium text-white backdrop-blur-md">
             {formatShortDate(event.startsAt)}
           </div>
@@ -38,7 +38,7 @@ export function EventCard({ event, priority = false }: { event: EventSummary; pr
                 <span className="truncate">{event.venueName} · {event.city}, {event.state}</span>
               </p>
             </div>
-            <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+            <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-colors motion-reduce:transition-none group-hover:text-primary" />
           </div>
           <div className="mt-5 flex items-end justify-between border-t border-white/8 pt-4">
             <span className="text-xs text-muted-foreground">{event.soldOut ? "Vendas encerradas" : "Ingressos a partir de"}</span>
