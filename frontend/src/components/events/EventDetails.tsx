@@ -114,7 +114,7 @@ export function EventDetails({ slug }: { slug: string }) {
         {gallery.length > 0 && (
           <div>
             <h2 className="mb-4 text-xl font-semibold text-white">Um pouco do que vem por aí</h2>
-            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
+            <div className="grid gap-4 sm:grid-cols-2">
               {gallery.map((image) => <div key={image.id} className="relative aspect-video overflow-hidden rounded-xl border border-white/8"><Image src={image.url!} alt={`Galeria de ${event.title}`} fill className="object-cover" sizes="50vw" /></div>)}
             </div>
           </div>

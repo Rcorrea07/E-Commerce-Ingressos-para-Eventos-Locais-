@@ -57,6 +57,19 @@ stripe listen --forward-to localhost:3001/api/v1/payments/stripe/webhook
 
 Depois, execute `docker compose up --build`. Somente chaves de teste são aceitas; chaves `sk_live_` e `pk_live_` fazem a API recusar a inicialização. Nunca registre esses valores no repositório.
 
+## Deploy no Render
+
+O arquivo [`render.yaml`](render.yaml) descreve o ambiente de produção com quatro serviços na mesma região: front-end, API, MySQL com disco persistente e MinIO com disco persistente. O Mailpit continua disponível apenas no Compose local; no Render, configure um provedor SMTP externo.
+
+No Render, crie um Blueprint a partir do repositório e preencha os segredos solicitados:
+
+- `PII_ENCRYPTION_KEY`: 64 caracteres hexadecimais;
+- `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD`: credenciais do administrador inicial;
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` e `SMTP_FROM`;
+- depois, se quiser pagamento de teste com Stripe, troque `PAYMENT_PROVIDER` para `stripe_test` e informe as três chaves `sk_test_`, `pk_test_` e `whsec_` no serviço da API.
+
+O Blueprint executa as migrations antes de cada deploy, cria o bucket público de mídia e executa o seed inicial somente após o primeiro deploy. Não reutilize os segredos do `.env` local.
+
 ## Desenvolvimento
 
 ```bash

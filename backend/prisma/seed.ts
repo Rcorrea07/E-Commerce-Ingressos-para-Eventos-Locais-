@@ -42,6 +42,7 @@ type EventFixture = {
   startHour: number;
   durationHours: number;
   coverFile: string;
+  galleryFiles?: string[];
   tickets: TicketFixture[];
 };
 
@@ -168,9 +169,9 @@ const fixtures: EventFixture[] = [
   },
   {
     categorySlug: 'tecnologia',
-    title: 'Futuro Agora Summit',
+    title: 'Campinas Tech & Produto 2026',
     slug: 'futuro-agora-summit',
-    description: 'Um encontro de tecnologia e criatividade com demonstrações, conversas práticas e conexões entre quem está construindo os próximos produtos digitais.',
+    description: 'Um encontro de um dia para pessoas de produto, engenharia e design, com cases de empresas locais, oficinas práticas e espaço para networking.',
     venueName: 'Expo Dom Pedro',
     postalCode: '13087901',
     street: 'Avenida Guilherme Campos',
@@ -181,10 +182,11 @@ const fixtures: EventFixture[] = [
     startsInDays: 24,
     startHour: 9,
     durationHours: 10,
-    coverFile: 'futuro-agora.webp',
+    coverFile: 'campinas-tech-produto.webp',
+    galleryFiles: ['campinas-tech-demo.webp', 'campinas-tech-networking.webp'],
     tickets: [
-      { name: 'Standard', description: 'Acesso às palestras, feira de inovação e espaços de networking.', priceCents: 16900, capacity: 200, maxPerOrder: 5 },
-      { name: 'Estudante', description: 'Acesso completo mediante apresentação de comprovante válido.', priceCents: 7900, capacity: 80, maxPerOrder: 2 }
+      { name: 'Standard', description: 'Acesso às palestras, sessões práticas e área de networking.', priceCents: 16900, capacity: 200, maxPerOrder: 5 },
+      { name: 'Estudante', description: 'Acesso completo para estudantes mediante apresentação de comprovante válido.', priceCents: 7900, capacity: 80, maxPerOrder: 2 }
     ]
   },
   {
@@ -375,6 +377,27 @@ try {
         await prisma.eventImage.create({
           data: { eventId: event.id, objectKey: coverKey, mimeType: 'image/webp', size: cover.length, kind: EventImageKind.COVER, position: 0 }
         });
+      }
+
+      for (const [index, galleryFile] of (fixture.galleryFiles ?? []).entries()) {
+        const position = index + 1;
+        const galleryKey = `events/${event.id}/seed-gallery-${position}.webp`;
+        const gallery = await readFile(resolve(process.cwd(), 'prisma', 'seed-assets', 'events', galleryFile));
+        await storage.put(galleryKey, gallery, 'image/webp');
+        const existingGallery = await prisma.eventImage.findUnique({ where: { objectKey: galleryKey } });
+        if (existingGallery) {
+          await prisma.eventImage.update({
+            where: { id: existingGallery.id },
+            data: { mimeType: 'image/webp', size: gallery.length, kind: EventImageKind.GALLERY, position }
+          });
+        } else {
+          const occupiedPosition = await prisma.eventImage.findFirst({ where: { eventId: event.id, kind: EventImageKind.GALLERY, position } });
+          if (!occupiedPosition) {
+            await prisma.eventImage.create({
+              data: { eventId: event.id, objectKey: galleryKey, mimeType: 'image/webp', size: gallery.length, kind: EventImageKind.GALLERY, position }
+            });
+          }
+        }
       }
 
       const tickets = new Map<string, { id: string }>();
