@@ -1,0 +1,183 @@
+services:
+  - type: pserv
+    name: ingressos-mysql
+    runtime: image
+    image:
+      url: docker.io/library/mysql:8.4.6
+    region: virginia
+    plan: starter
+    dockerCommand: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    disk:
+      name: mysql-data
+      mountPath: /var/lib/mysql
+      sizeGB: 10
+    envVars:
+      - key: MYSQL_DATABASE
+        value: tickets
+      - key: MYSQL_USER
+        value: tickets
+      - key: MYSQL_PASSWORD
+        generateValue: true
+      - key: MYSQL_ROOT_PASSWORD
+        generateValue: true
+
+  - type: web
+    name: ingressos-minio
+    runtime: image
+    image:
+      url: docker.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    region: virginia
+    plan: starter
+    dockerCommand: minio server /data --address $HOST:$PORT
+    healthCheckPath: /minio/health/live
+    disk:
+      name: minio-data
+      mountPath: /data
+      sizeGB: 10
+    envVars:
+      - key: MINIO_ROOT_USER
+        generateValue: true
+      - key: MINIO_ROOT_PASSWORD
+        generateValue: true
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "9000"
+      - key: MINIO_BROWSER
+        value: "off"
+
+  - type: web
+    name: ingressos-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: virginia
+    plan: starter
+    autoDeployTrigger: commit
+    healthCheckPath: /health/live
+    preDeployCommand: npm run render:migrate && npm run render:storage
+    initialDeployHook: node dist/prisma/seed.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: ingressos-web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: API_PUBLIC_URL
+        fromService:
+          type: web
+          name: ingressos-api
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: BETTER_AUTH_URL
+        fromService:
+          type: web
+          name: ingressos-api
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: DB_HOST
+        fromService:
+          type: pserv
+          name: ingressos-mysql
+          property: host
+      - key: DB_PORT
+        fromService:
+          type: pserv
+          name: ingressos-mysql
+          property: port
+      - key: DB_USER
+        value: tickets
+      - key: DB_PASSWORD
+        fromService:
+          type: pserv
+          name: ingressos-mysql
+          envVarKey: MYSQL_PASSWORD
+      - key: DB_NAME
+        value: tickets
+      - key: MINIO_ENDPOINT
+        fromService:
+          type: web
+          name: ingressos-minio
+          property: host
+      - key: MINIO_PORT
+        fromService:
+          type: web
+          name: ingressos-minio
+          property: port
+      - key: MINIO_USE_SSL
+        value: "false"
+      - key: MINIO_ACCESS_KEY
+        fromService:
+          type: web
+          name: ingressos-minio
+          envVarKey: MINIO_ROOT_USER
+      - key: MINIO_SECRET_KEY
+        fromService:
+          type: web
+          name: ingressos-minio
+          envVarKey: MINIO_ROOT_PASSWORD
+      - key: MINIO_BUCKET
+        value: event-media
+      - key: MINIO_PUBLIC_URL
+        fromService:
+          type: web
+          name: ingressos-minio
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: PII_ENCRYPTION_KEY
+        sync: false
+      - key: PII_HASH_KEY
+        generateValue: true
+      - key: QR_SIGNING_SECRET
+        generateValue: true
+      - key: PAYMENT_PROVIDER
+        value: simulated
+      - key: CHECKOUT_TTL_SECONDS
+        value: "900"
+      - key: CHECKOUT_PRESENCE_SECONDS
+        value: "60"
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_DEMO_DATA
+        value: "false"
+
+  - type: web
+    name: ingressos-web
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    region: virginia
+    plan: starter
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: HOSTNAME
+        value: 0.0.0.0
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: ingressos-api
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: NEXT_PUBLIC_STORAGE_URL
+        fromService:
+          type: web
+          name: ingressos-minio
+          envVarKey: RENDER_EXTERNAL_URL
