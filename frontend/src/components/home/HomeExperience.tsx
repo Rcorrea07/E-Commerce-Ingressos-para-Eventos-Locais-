@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, CalendarCheck2, ChevronDown, LoaderCircle, MapPin, Search, ShieldCheck, TicketCheck } from "lucide-react";
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ArrowRight, CalendarCheck2, ChevronDown, ChevronLeft, ChevronRight, LoaderCircle, MapPin, Search, ShieldCheck, TicketCheck } from "lucide-react";
 import { EventCard } from "@/components/events/Eventcard";
 import { HeroCarousel } from "@/components/home/HeroCarousel";
 import { StatePanel } from "@/components/states/StatePanel";
@@ -15,10 +15,14 @@ import { formatShortDate } from "@/lib/format";
 import { problemMessage } from "@/lib/api/problem";
 
 type CitySuggestion = { city: string; state: string };
+type CatalogFilters = { search?: string; city?: string; categoryId?: string };
+
+const CATALOG_PAGE_SIZE = 6;
 
 export function HomeExperience() {
   const router = useRouter();
   const [events, setEvents] = useState<EventSummary[]>([]);
+  const [featuredEvents, setFeaturedEvents] = useState<EventSummary[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState<EventSummary[]>([]);
@@ -32,6 +36,8 @@ export function HomeExperience() {
   const [activeCitySuggestion, setActiveCitySuggestion] = useState(-1);
   const skipNextCitySuggestionsRef = useRef(false);
   const [categoryId, setCategoryId] = useState<string>();
+  const [appliedFilters, setAppliedFilters] = useState<CatalogFilters>({});
+  const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
@@ -109,20 +115,28 @@ export function HomeExperience() {
     };
   }, [city]);
 
-  const loadEvents = useCallback(async (filters?: { search?: string; city?: string; categoryId?: string }) => {
+  const loadEvents = useCallback(async (filters: CatalogFilters = {}, page = 1) => {
     setLoading(true);
     setError(undefined);
     const { data, error: apiError } = await api.GET("/api/v1/events", {
-      params: { query: { page: 1, pageSize: 20, sort: "startsAt", ...filters } },
+      params: { query: { page, pageSize: CATALOG_PAGE_SIZE, sort: "startsAt", ...filters } },
     });
     if (apiError) setError(problemMessage(apiError, "Não conseguimos carregar os eventos agora."));
     setEvents(data?.data ?? []);
+    setPagination({
+      page: data?.pagination.page ?? page,
+      total: data?.pagination.total ?? 0,
+      totalPages: data?.pagination.totalPages ?? 1,
+    });
     setLoading(false);
   }, []);
 
   useEffect(() => {
     void Promise.all([
       Promise.resolve().then(() => loadEvents()),
+      api.GET("/api/v1/events", {
+        params: { query: { page: 1, pageSize: 7, sort: "startsAt" } },
+      }).then(({ data }) => setFeaturedEvents(data?.data ?? [])),
       api.GET("/api/v1/categories").then(({ data }) => setCategories(data ?? [])),
     ]);
   }, [loadEvents]);
@@ -150,7 +164,9 @@ export function HomeExperience() {
   function submit(event: FormEvent) {
     event.preventDefault();
     setSuggestionsOpen(false);
-    void loadEvents({ search: search || undefined, city: city || undefined, categoryId });
+    const filters = { search: search.trim() || undefined, city: city.trim() || undefined, categoryId };
+    setAppliedFilters(filters);
+    void loadEvents(filters, 1);
     document.getElementById("eventos")?.scrollIntoView({ behavior: "smooth" });
   }
 
@@ -213,11 +229,17 @@ export function HomeExperience() {
 
   function chooseCategory(id?: string) {
     setCategoryId(id);
-    void loadEvents({ search: search || undefined, city: city || undefined, categoryId: id });
+    const filters = { search: search.trim() || undefined, city: city.trim() || undefined, categoryId: id };
+    setAppliedFilters(filters);
+    void loadEvents(filters, 1);
   }
 
-  const featured = events[0];
-  const remaining = useMemo(() => events.slice(featured ? 1 : 0), [events, featured]);
+  function changePage(page: number) {
+    if (page < 1 || page > pagination.totalPages || page === pagination.page) return;
+    void loadEvents(appliedFilters, page);
+    document.getElementById("eventos")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <main>
       <section className="relative z-20 isolate min-h-[calc(100svh-4rem)] border-b border-white/8">
@@ -228,7 +250,7 @@ export function HomeExperience() {
         </div>
 
         <div className="px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-5">
-          <HeroCarousel events={events} />
+          <HeroCarousel events={featuredEvents} />
 
           <div className="content-grid mt-4">
             <form onSubmit={submit} className="smooth-shadow-ring-lg smooth-ring-primary/18 shadow-black/40 relative z-30 mx-auto grid max-w-4xl gap-2 rounded-2xl bg-black/45 p-2 backdrop-blur-xl sm:grid-cols-[1fr_1fr_auto]">
@@ -358,14 +380,52 @@ export function HomeExperience() {
           </div>
         </div>
 
-        <div className="mt-9">
+        <div className="mt-9" aria-busy={loading}>
+          <p
+            className={loading || error || events.length === 0 ? "sr-only" : "mb-4 text-sm text-muted-foreground"}
+            role="status"
+            aria-live="polite"
+          >
+            {loading ? "Carregando eventos." : error ? "" : `${pagination.total} ${pagination.total === 1 ? "evento encontrado" : "eventos encontrados"}`}
+          </p>
           {loading ? <StatePanel kind="loading" description="Buscando experiências perto de você." /> : error ? (
-            <StatePanel kind="error" description={error} action={{ label: "Tentar novamente", onClick: () => void loadEvents() }} />
+            <StatePanel kind="error" description={error} action={{ label: "Tentar novamente", onClick: () => void loadEvents(appliedFilters, pagination.page) }} />
           ) : events.length === 0 ? (
             <StatePanel kind="empty" title="Nenhum evento encontrado" description="Tente mudar a cidade, a categoria ou o termo pesquisado." />
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {(remaining.length ? remaining : events).map((event, index) => <EventCard key={event.id} event={event} priority={index < 3} />)}
+            <div>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {events.map((event, index) => <EventCard key={event.id} event={event} priority={index < 3 && pagination.page === 1} />)}
+              </div>
+              {pagination.totalPages > 1 ? (
+                <nav aria-label="Paginação do catálogo" className="mt-8 flex flex-col gap-3 border-t border-white/8 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    Página {pagination.page} de {pagination.totalPages}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={pagination.page <= 1}
+                      onClick={() => changePage(pagination.page - 1)}
+                      aria-label="Ir para a página anterior do catálogo"
+                    >
+                      <ChevronLeft aria-hidden="true" /> Anterior
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={pagination.page >= pagination.totalPages}
+                      onClick={() => changePage(pagination.page + 1)}
+                      aria-label="Ir para a próxima página do catálogo"
+                    >
+                      Próxima <ChevronRight aria-hidden="true" />
+                    </Button>
+                  </div>
+                </nav>
+              ) : null}
             </div>
           )}
         </div>
