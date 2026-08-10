@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, CalendarCheck2, ChevronDown, ChevronLeft, ChevronRight, LoaderCircle, MapPin, Search, ShieldCheck, TicketCheck } from "lucide-react";
 import { EventCard } from "@/components/events/Eventcard";
 import { HeroCarousel } from "@/components/home/HeroCarousel";
@@ -35,6 +35,8 @@ export function HomeExperience() {
   const [citySuggestionsLoading, setCitySuggestionsLoading] = useState(false);
   const [activeCitySuggestion, setActiveCitySuggestion] = useState(-1);
   const skipNextCitySuggestionsRef = useRef(false);
+  const paginationAnchorRef = useRef<HTMLElement | null>(null);
+  const pendingPaginationTopRef = useRef<number | null>(null);
   const [categoryId, setCategoryId] = useState<string>();
   const [appliedFilters, setAppliedFilters] = useState<CatalogFilters>({});
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 1 });
@@ -236,9 +238,19 @@ export function HomeExperience() {
 
   function changePage(page: number) {
     if (page < 1 || page > pagination.totalPages || page === pagination.page) return;
+    pendingPaginationTopRef.current = paginationAnchorRef.current?.getBoundingClientRect().top ?? null;
     void loadEvents(appliedFilters, page);
-    document.getElementById("eventos")?.scrollIntoView({ behavior: "smooth" });
   }
+
+  useLayoutEffect(() => {
+    const previousTop = pendingPaginationTopRef.current;
+    const anchor = paginationAnchorRef.current;
+    if (loading || previousTop === null || !anchor) return;
+
+    const offset = anchor.getBoundingClientRect().top - previousTop;
+    if (Math.abs(offset) > 1) window.scrollBy({ top: offset, behavior: "auto" });
+    pendingPaginationTopRef.current = null;
+  }, [loading, pagination.page]);
 
   return (
     <main>
@@ -398,7 +410,7 @@ export function HomeExperience() {
                 {events.map((event, index) => <EventCard key={event.id} event={event} priority={index < 3 && pagination.page === 1} />)}
               </div>
               {pagination.totalPages > 1 ? (
-                <nav aria-label="Paginação do catálogo" className="mt-8 flex flex-col gap-3 border-t border-white/8 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <nav ref={paginationAnchorRef} aria-label="Paginação do catálogo" className="mt-8 flex flex-col gap-3 border-t border-white/8 pt-5 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm tabular-nums text-muted-foreground">
                     Página {pagination.page} de {pagination.totalPages}
                   </span>
