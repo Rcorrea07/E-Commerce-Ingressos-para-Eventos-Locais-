@@ -6,7 +6,6 @@ services:
       url: docker.io/library/mysql:8.4.6
     region: virginia
     plan: starter
-    dockerCommand: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
     disk:
       name: mysql-data
       mountPath: /var/lib/mysql
@@ -85,10 +84,7 @@ services:
           name: ingressos-mysql
           property: host
       - key: DB_PORT
-        fromService:
-          type: pserv
-          name: ingressos-mysql
-          property: port
+        value: "3306"
       - key: DB_USER
         value: tickets
       - key: DB_PASSWORD
