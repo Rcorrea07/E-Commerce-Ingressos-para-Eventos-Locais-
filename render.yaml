@@ -54,7 +54,7 @@ services:
     plan: starter
     autoDeployTrigger: commit
     healthCheckPath: /health/live
-    preDeployCommand: npm run render:migrate && npm run render:storage
+    preDeployCommand: npm run render:deploy
     initialDeployHook: node dist/prisma/seed.js
     envVars:
       - key: NODE_ENV
