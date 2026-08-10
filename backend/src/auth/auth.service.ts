@@ -13,6 +13,7 @@ export class AuthService {
 
   constructor(prisma: PrismaService, config: ConfigService<Env, true>) {
     const frontendUrl = config.get('FRONTEND_URL', { infer: true });
+    const isProduction = config.get('NODE_ENV', { infer: true }) === 'production';
     const transporter = nodemailer.createTransport({
       host: config.get('SMTP_HOST', { infer: true }),
       port: config.get('SMTP_PORT', { infer: true }),
@@ -51,7 +52,15 @@ export class AuthService {
       },
       advanced: {
         database: { generateId: 'uuid' },
-        useSecureCookies: config.get('NODE_ENV', { infer: true }) === 'production'
+        useSecureCookies: isProduction,
+        ...(isProduction ? {
+          defaultCookieAttributes: {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none' as const,
+            partitioned: true
+          }
+        } : {})
       },
       plugins: [
         admin({ defaultRole: 'customer', adminRoles: ['admin'] }),
